@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery — Business Landscape &amp; Objectives — Friends &amp; Enemies</title>
+<style>
+  /* ---- Brand fonts (Friends & Enemies design system) ---- */
+  @font-face{font-family:"Outfit";src:url("../assets/fonts/Outfit-VariableFont_wght.ttf") format("truetype-variations");font-weight:100 900;font-display:swap}
+  @font-face{font-family:"EB Garamond";src:url("../assets/fonts/EBGaramond-Italic-VariableFont_wght.ttf") format("truetype-variations");font-weight:400 800;font-style:italic;font-display:swap}
+  @font-face{font-family:"Source Code Pro";src:url("../assets/fonts/SourceCodePro-VariableFont_wght.ttf") format("truetype-variations");font-weight:200 900;font-display:swap}
+
+  :root{
+    --ink:#111111; --paper:#ffffff; --paper-warm:#faf9f7;
+    --g200:#e6e5e3; --g300:#d4d4d4; --g400:#b0b0b0; --g500:#8a8a8a; --g600:#666666; --g800:#2b2b2b;
+    --font-sans:"Outfit","Helvetica Neue",Arial,sans-serif;
+    --font-serif:"EB Garamond",Georgia,serif;
+    --font-mono:"Source Code Pro",ui-monospace,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper-warm); color:var(--ink);
+    font-family:var(--font-sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  /* fixed-canvas scaling: 1920x1080 canvas, uniformly scaled to fit any viewport */
+  .viewport{position:fixed;inset:0;background:#000;overflow:hidden}
+  .canvas{position:absolute;top:50%;left:50%;width:1920px;height:1080px;
+    transform-origin:center center;background:var(--paper-warm);overflow:hidden}
+  .stage{position:absolute;inset:0}
+
+  /* ---- Slide base ---- */
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:120px;
+    opacity:0;transform:translateX(48px);
+    transition:opacity .45s ease, transform .48s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .slide.before{transform:translateX(-48px)}
+  .slide.after{transform:translateX(48px)}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+
+  /* closing / soft-beat slides: cross-fade, no slide */
+  .slide.closer{transform:none !important;transition:opacity .85s ease}
+
+  /* dark bookends / section turns */
+  .slide.invert{background:var(--ink);color:var(--paper)}
+  .slide.invert .kick .lbl{color:var(--g400)}
+  .slide.invert .kick .num{color:var(--g600)}
+  .slide.invert .sub{color:var(--g400)}
+  .slide.invert .rule{background:rgba(255,255,255,.16)}
+  .slide.invert .point{border-color:rgba(255,255,255,.14)}
+  .slide.invert .chip{border-color:rgba(255,255,255,.28);color:var(--paper)}
+  .slide.invert .arrow{color:var(--g500)}
+
+  /* ---- Kicker ---- */
+  .kick{display:flex;align-items:center;gap:14px;
+    font-family:var(--font-mono);font-size:13px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:40px}
+  .kick .num{color:var(--g500)}
+  .kick .lbl{color:var(--g600)}
+  .kick .rule{flex:1;height:1px;background:var(--g300);max-width:280px}
+
+  /* ---- Headline ---- */
+  h1.head{
+    font-family:var(--font-sans);font-weight:600;
+    font-size:66px;line-height:1.04;letter-spacing:-.02em;
+    margin:0;max-width:20ch;text-wrap:balance;
+  }
+  h1.head.q{max-width:24ch}
+  .sub{font-family:var(--font-sans);font-weight:300;color:var(--g600);
+    font-size:26px;margin-top:22px;letter-spacing:-.01em;max-width:52ch}
+  .slide.invert .sub{color:var(--g400)}
+
+  /* ---- Supporting points ---- */
+  .points{margin-top:44px;max-width:62ch;display:flex;flex-direction:column}
+  .point{
+    font-family:var(--font-sans);font-weight:300;
+    font-size:24px;line-height:1.42;letter-spacing:-.01em;
+    padding:16px 0;border-top:1px solid var(--g200);
+  }
+  .point:first-child{border-top:0}
+  .point strong{font-weight:600}
+
+  /* ---- Closer big line ---- */
+  .bigline{font-family:var(--font-sans);font-weight:600;
+    font-size:64px;line-height:1.05;letter-spacing:-.02em;
+    margin-top:44px;max-width:18ch}
+  .hint{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--g500);margin-top:40px}
+
+  /* ---- Flow chips ---- */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin-top:44px;max-width:1000px}
+  .chip{font-family:var(--font-mono);font-size:15px;font-weight:500;
+    letter-spacing:.04em;padding:9px 15px;border:1px solid var(--ink);white-space:nowrap}
+  .arrow{color:var(--g400);font-size:18px;line-height:1}
+
+  /* ---- SWOT 2x2 ---- */
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--g300);
+    border:1px solid var(--g300);margin-top:42px;max-width:1120px}
+  .quad{background:var(--paper-warm);padding:38px 42px;
+    display:flex;flex-direction:column;gap:14px;min-height:220px}
+  .quad .qh{font-family:var(--font-mono);font-size:13px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink)}
+  .quad .qline{font-family:var(--font-sans);font-weight:300;
+    font-size:23px;line-height:1.34;color:var(--g600);letter-spacing:-.01em}
+
+  /* ---- OKR template ---- */
+  .okr{margin-top:36px;max-width:1120px;display:flex;flex-direction:column;gap:14px}
+  .okr .obj{border:1.5px solid var(--ink);padding:26px 30px}
+  .okr .olbl,.okr .klbl{font-family:var(--font-mono);font-size:12px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--g500)}
+  .okr .ofield{font-family:var(--font-sans);font-weight:500;
+    font-size:30px;letter-spacing:-.01em;margin-top:10px;color:var(--g400)}
+  .okr .krs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .okr .kr{border:1px solid var(--g300);padding:16px 20px;min-height:132px}
+  .okr .kr .klbl{color:var(--g600)}
+  .okr .kr .kdash{font-family:var(--font-sans);font-weight:300;font-size:16px;color:var(--g400);margin-top:10px}
+
+  /* live-exercise slide: tighter to fit template + notes */
+  .slide.ex .points{margin-top:28px}
+  .slide.ex .point{padding:10px 0;font-size:21px}
+  .slide.ex .okr{margin-top:24px}
+  .slide.ex .okr .obj{padding:20px 26px}
+  .slide.ex .okr .kr{min-height:98px}
+  .slide.ex .hint{margin-top:22px}
+
+  /* rise-in animation for content */
+  .rise{opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease, transform .6s cubic-bezier(.16,1,.3,1)}
+  .slide.active .rise{opacity:1;transform:none}
+
+  /* ---- Fixed chrome ---- */
+  .brand{position:absolute;top:52px;left:52px;z-index:20;
+    width:48px;color:var(--ink);pointer-events:none;transition:color .45s ease}
+  .brand.on-dark{color:var(--paper)}
+  .brand svg{width:100%;display:block}
+
+  .footer{position:absolute;bottom:44px;left:52px;
+    right:52px;display:flex;justify-content:space-between;align-items:center;
+    z-index:20;font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--g500);pointer-events:none;transition:color .45s ease}
+  .footer.on-dark{color:var(--g500)}
+  .counter .cur{color:var(--ink);transition:color .45s ease}
+  .footer.on-dark .counter .cur{color:var(--paper)}
+
+  .nav{display:flex;gap:8px;pointer-events:auto}
+  .nav button{width:34px;height:34px;border:1px solid var(--g400);background:transparent;
+    color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:15px;border-radius:0;transition:background .15s,border-color .15s,color .15s}
+  .nav button:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .footer.on-dark .nav button:hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+
+  /* progress bar */
+  .prog{position:absolute;top:0;left:0;height:2px;background:var(--ink);z-index:30;
+    transition:width .45s cubic-bezier(.16,1,.3,1), background .45s ease}
+  .prog.on-dark{background:var(--paper)}
+
+  /* export: flatten all slides to a clean, opaque, fixed-size state. */
+  .canvas[noscale]{transform:none !important;top:0 !important;left:0 !important;width:1920px !important;height:1080px !important}
+  .canvas[noscale] .slide{opacity:1 !important;transform:none !important;transition:none !important}
+  .canvas[noscale] .rise{opacity:1 !important;transform:none !important;transition:none !important}
+
+  @media (prefers-reduced-motion: reduce){
+    .slide,.rise,.prog{transition:opacity .2s ease}
+    .rise{transform:none}
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+  <div class="canvas" id="canvas">
+  <div class="prog" id="prog"></div>
+
+  <div class="brand" id="brand" aria-label="Friends and Enemies">
+    <svg viewBox="0 0 424.7 118.21" fill="currentColor" aria-hidden="true">
+      <rect x="101.94" y="100.35" width="214.14" height="17.86"></rect>
+      <polygon points="0 118.21 0 0 76.12 0 76.12 19.34 21.13 19.34 21.13 50.27 70.73 50.27 70.73 68.13 21.13 68.13 21.13 118.21 0 118.21"></polygon>
+      <polygon points="349.07 118.21 349.07 0 424.7 0 424.7 19.34 370.21 19.34 370.21 50.27 418.66 50.27 418.66 68.14 370.21 68.14 370.21 98.71 424.7 98.71 424.7 118.21 349.07 118.21"></polygon>
+    </svg>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- 1 — intro / framing -->
+    <section class="slide invert" data-screen-label="01">
+      <div class="kick rise"><span class="num">01</span><span class="lbl">Discovery · Session 1</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Where the business is headed</h1>
+      <div class="sub rise" style="transition-delay:.14s">Before we diagnose anything, let’s get the room aligned on where Centex actually wants to end up.</div>
+      <div class="hint rise" style="transition-delay:.28s">A guided conversation — mostly listening →</div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide" data-screen-label="02">
+      <div class="kick rise"><span class="num">02</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Where do you want Centex to be — in 1 year? In 3 years?</h1>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" data-screen-label="03">
+      <div class="kick rise"><span class="num">03</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What does winning look like for the business this year?</h1>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" data-screen-label="04">
+      <div class="kick rise"><span class="num">04</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What’s the one metric leadership is watching most closely?</h1>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" data-screen-label="05">
+      <div class="kick rise"><span class="num">05</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Where is growth coming from?</h1>
+      <div class="sub rise" style="transition-delay:.14s">More locations, more transactions, higher basket size — or loyalty?</div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" data-screen-label="06">
+      <div class="kick rise"><span class="num">06</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Which markets are you growing? Which are you defending?</h1>
+    </section>
+
+    <!-- 7 — SWOT grid (graphic) -->
+    <section class="slide" data-screen-label="07">
+      <div class="kick rise"><span class="num">07</span><span class="lbl">Environment scan</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">SWOT</h1>
+      <div class="swot rise" style="transition-delay:.16s">
+        <div class="quad">
+          <div class="qh">Strengths</div>
+          <div class="qline">What Centex already does better than anyone.</div>
+        </div>
+        <div class="quad">
+          <div class="qh">Weaknesses</div>
+          <div class="qline">Where the business loses ground today.</div>
+        </div>
+        <div class="quad">
+          <div class="qh">Opportunities</div>
+          <div class="qline">What’s changing that Centex could get ahead of.</div>
+        </div>
+        <div class="quad">
+          <div class="qh">Threats</div>
+          <div class="qline">What could hurt the business over the next 1–3 years.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" data-screen-label="08">
+      <div class="kick rise"><span class="num">08</span><span class="lbl">SWOT · Strength</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What does Centex do better than anyone else?</h1>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" data-screen-label="09">
+      <div class="kick rise"><span class="num">09</span><span class="lbl">SWOT · Strength</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Where do customers already give you credit?</h1>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" data-screen-label="10">
+      <div class="kick rise"><span class="num">10</span><span class="lbl">SWOT · Weakness</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Where do you lose to competitors today?</h1>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide" data-screen-label="11">
+      <div class="kick rise"><span class="num">11</span><span class="lbl">SWOT · Weakness</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What’s holding marketing back internally?</h1>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide" data-screen-label="12">
+      <div class="kick rise"><span class="num">12</span><span class="lbl">SWOT · Opportunity</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What’s changing that Centex could get ahead of?</h1>
+    </section>
+
+    <!-- 13 -->
+    <section class="slide" data-screen-label="13">
+      <div class="kick rise"><span class="num">13</span><span class="lbl">SWOT · Opportunity</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What assets are underused today?</h1>
+    </section>
+
+    <!-- 14 -->
+    <section class="slide" data-screen-label="14">
+      <div class="kick rise"><span class="num">14</span><span class="lbl">SWOT · Threat</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What’s the biggest external threat over the next 1–3 years?</h1>
+    </section>
+
+    <!-- 15 -->
+    <section class="slide" data-screen-label="15">
+      <div class="kick rise"><span class="num">15</span><span class="lbl">SWOT · Threat</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">What bigger questions about the category are already on the table?</h1>
+    </section>
+
+    <!-- 16 -->
+    <section class="slide" data-screen-label="16">
+      <div class="kick rise"><span class="num">16</span><span class="lbl">Competitive position</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Who is the competitive set, really?</h1>
+    </section>
+
+    <!-- 17 -->
+    <section class="slide" data-screen-label="17">
+      <div class="kick rise"><span class="num">17</span><span class="lbl">Competitive position</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Where do you want to sit relative to them?</h1>
+    </section>
+
+    <!-- 18 — OKR context (explainer) -->
+    <section class="slide invert" data-screen-label="18">
+      <div class="kick rise"><span class="num">18</span><span class="lbl">OKRs</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">How an OKR works</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.14s">An <strong>Objective</strong> is a business outcome — what you’re trying to achieve.</div>
+        <div class="point rise" style="transition-delay:.22s"><strong>Key Results</strong> are 2–3 measurable signals that show progress toward it.</div>
+      </div>
+      <div class="flow rise" style="transition-delay:.3s">
+        <span class="chip">Objective</span><span class="arrow">→</span>
+        <span class="chip">Key result 01</span>
+        <span class="chip">Key result 02</span>
+        <span class="chip">Key result 03</span>
+      </div>
+    </section>
+
+    <!-- 19 — live OKR exercise -->
+    <section class="slide ex" data-screen-label="19">
+      <div class="kick rise"><span class="num">19</span><span class="lbl">OKRs · Live exercise</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Let’s set some OKRs</h1>
+      <div class="points" style="max-width:74ch">
+        <div class="point rise" style="transition-delay:.14s">Which two or three things do you most need marketing to move?</div>
+        <div class="point rise" style="transition-delay:.2s">What would leadership need to see this year to call it a success?</div>
+      </div>
+      <div class="okr rise" style="transition-delay:.28s">
+        <div class="obj">
+          <div class="olbl">Objective</div>
+          <div class="ofield">A business outcome from today’s conversation</div>
+        </div>
+        <div class="krs">
+          <div class="kr"><div class="klbl">Key Result 01</div><div class="kdash">—</div></div>
+          <div class="kr"><div class="klbl">Key Result 02</div><div class="kdash">—</div></div>
+          <div class="kr"><div class="klbl">Key Result 03</div><div class="kdash">—</div></div>
+        </div>
+      </div>
+      <div class="hint rise" style="transition-delay:.38s">No time to do it live? Leave it blank — it becomes a takeaway.</div>
+    </section>
+
+  </div>
+
+  <div class="footer" id="footer">
+    <div class="counter"><span class="cur" id="cur">01</span> / <span id="total">19</span></div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous slide">←</button>
+      <button id="next" aria-label="Next slide">→</button>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('canvas');
+  function fit(){
+    if(canvas.hasAttribute('noscale')) return;
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    canvas.style.transform = 'translate(-50%,-50%) scale('+s+')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var prog = document.getElementById('prog');
+  var brand = document.getElementById('brand');
+  var footer = document.getElementById('footer');
+  var curEl = document.getElementById('cur');
+  document.getElementById('total').textContent = String(total).padStart(2,'0');
+
+  function pad(n){return String(n+1).padStart(2,'0');}
+
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.remove('active','before','after');
+      if(i===cur) s.classList.add('active');
+      else if(i<cur) s.classList.add('before');
+      else s.classList.add('after');
+    });
+    var dark = slides[cur].classList.contains('invert');
+    brand.classList.toggle('on-dark',dark);
+    footer.classList.toggle('on-dark',dark);
+    prog.classList.toggle('on-dark',dark);
+    prog.style.width = ((cur)/(total-1)*100) + '%';
+    curEl.textContent = pad(cur);
+  }
+
+  function go(n){
+    cur = Math.max(0, Math.min(total-1, n));
+    render();
+  }
+  function next(){ if(cur<total-1) go(cur+1); }
+  function prev(){ if(cur>0) go(cur-1); }
+
+  document.getElementById('next').addEventListener('click', function(e){e.stopPropagation();next();});
+  document.getElementById('prev').addEventListener('click', function(e){e.stopPropagation();prev();});
+
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav')) return;
+    next();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key===' '||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(total-1);}
+  });
+
+  window.__deckGo = go;
+  render();
+})();
+</script>
+</body>
+</html>

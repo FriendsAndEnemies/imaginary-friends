@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding — Friends &amp; Enemies</title>
+<style>
+  /* ---- Brand fonts (Friends & Enemies design system) ---- */
+  @font-face{font-family:"Outfit";src:url("../assets/fonts/Outfit-VariableFont_wght.ttf") format("truetype-variations");font-weight:100 900;font-display:swap}
+  @font-face{font-family:"EB Garamond";src:url("../assets/fonts/EBGaramond-Italic-VariableFont_wght.ttf") format("truetype-variations");font-weight:400 800;font-style:italic;font-display:swap}
+  @font-face{font-family:"Source Code Pro";src:url("../assets/fonts/SourceCodePro-VariableFont_wght.ttf") format("truetype-variations");font-weight:200 900;font-display:swap}
+
+  :root{
+    --ink:#111111; --paper:#ffffff; --paper-warm:#faf9f7;
+    --g200:#e6e5e3; --g300:#d4d4d4; --g400:#b0b0b0; --g500:#8a8a8a; --g600:#666666; --g800:#2b2b2b;
+    --font-sans:"Outfit","Helvetica Neue",Arial,sans-serif;
+    --font-serif:"EB Garamond",Georgia,serif;
+    --font-mono:"Source Code Pro",ui-monospace,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper-warm); color:var(--ink);
+    font-family:var(--font-sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--ink);color:var(--paper)}
+  a{color:var(--ink);text-decoration:underline}
+  a:hover{color:var(--g600)}
+
+  /* fixed-canvas scaling: 1920x1080 canvas, uniformly scaled to fit any viewport */
+  .viewport{position:fixed;inset:0;background:#000;overflow:hidden}
+  .canvas{position:absolute;top:50%;left:50%;width:1920px;height:1080px;
+    transform-origin:center center;background:var(--paper-warm);overflow:hidden}
+  .stage{position:absolute;inset:0}
+
+  /* ---- Slide base ---- */
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:120px;
+    opacity:0;transform:translateX(48px);
+    transition:opacity .45s ease, transform .48s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .slide.before{transform:translateX(-48px)}
+  .slide.after{transform:translateX(48px)}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+
+  /* section openers / closer: cross-fade, no slide */
+  .slide.closer{transform:none !important;transition:opacity .85s ease}
+
+  /* dark bookends / section turns */
+  .slide.invert{background:var(--ink);color:var(--paper)}
+  .slide.invert .kick .lbl{color:var(--g400)}
+  .slide.invert .kick .num{color:var(--g600)}
+  .slide.invert .sub{color:var(--g400)}
+  .slide.invert .rule{background:rgba(255,255,255,.16)}
+  .slide.invert .point{border-color:rgba(255,255,255,.14)}
+  .slide.invert .chip{border-color:rgba(255,255,255,.28);color:var(--paper)}
+  .slide.invert .arrow{color:var(--g500)}
+  .slide.invert .col{border-color:rgba(255,255,255,.18)}
+  .slide.invert .cols{border-color:rgba(255,255,255,.5)}
+  .slide.invert .col .cnum{color:var(--g500)}
+  .slide.invert .quote .cite{color:var(--g500)}
+  .slide.invert .fnote{color:var(--g400)}
+
+  /* ---- Kicker ---- */
+  .kick{display:flex;align-items:center;gap:14px;
+    font-family:var(--font-mono);font-size:13px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:40px}
+  .kick .num{color:var(--g500)}
+  .kick .lbl{color:var(--g600)}
+  .kick .rule{flex:1;height:1px;background:var(--g300);max-width:280px}
+
+  /* ---- Headline ---- */
+  h1.head{
+    font-family:var(--font-sans);font-weight:600;
+    font-size:66px;line-height:1.04;letter-spacing:-.02em;
+    margin:0;max-width:20ch;text-wrap:balance;
+  }
+  h1.head.sm{font-size:54px}
+  .sub{font-family:var(--font-sans);font-weight:300;color:var(--g600);
+    font-size:22px;margin-top:14px;letter-spacing:-.01em;max-width:56ch}
+
+  /* ---- Supporting points ---- */
+  .points{margin-top:48px;max-width:64ch;display:flex;flex-direction:column}
+  .point{
+    font-family:var(--font-sans);font-weight:300;
+    font-size:24px;line-height:1.42;letter-spacing:-.01em;
+    padding:16px 0;border-top:1px solid var(--g200);
+  }
+  .point:first-child{border-top:0}
+  .point strong{font-weight:600}
+
+  .fnote{font-family:var(--font-sans);font-weight:300;font-size:18px;
+    line-height:1.4;color:var(--g600);margin-top:30px;max-width:70ch}
+  .fnote strong{font-weight:600;color:var(--ink)}
+
+  /* ---- Two-track panel (slide 7) ---- */
+  .tracks{display:flex;flex-direction:column;gap:38px}
+  .track{border-top:1.5px solid rgba(255,255,255,.5);padding-top:22px}
+  .track .tlbl{font-family:var(--font-mono);font-size:13px;font-weight:500;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--g400)}
+  .track .tname{font-family:var(--font-serif);font-style:italic;font-weight:500;color:var(--g300);
+    font-size:52px;line-height:1.05;letter-spacing:-.01em;margin-top:26px}
+
+  /* ---- Columns (2/3-up) ---- */
+  .cols{display:flex;gap:0;margin-top:44px;max-width:1440px;border-top:1.5px solid var(--ink)}
+  .col{flex:1;padding:22px 30px 14px;border-right:1px solid var(--g300)}
+  .col:last-child{border-right:0}
+  .col .cnum{font-family:var(--font-mono);font-size:12px;color:var(--g500);letter-spacing:.1em;text-transform:uppercase}
+  .col .cname{font-family:var(--font-sans);font-weight:600;font-size:30px;letter-spacing:-.01em;margin-top:10px}
+  .col .cbody{font-family:var(--font-sans);font-weight:300;font-size:19px;
+    line-height:1.42;color:var(--g600);margin-top:12px}
+  .slide.invert .col .cbody{color:var(--g400)}
+
+  /* ---- Rhythm ladder ---- */
+  .ladder{display:flex;align-items:flex-end;gap:26px;margin-top:58px;max-width:1560px}
+  .rung{flex:1;border-top:1.5px solid var(--ink)}
+  .rung .rfreq{font-family:var(--font-mono);font-size:13px;color:var(--g500);
+    letter-spacing:.1em;text-transform:uppercase;padding-top:14px}
+  .rung .rname{font-family:var(--font-sans);font-weight:600;font-size:26px;
+    letter-spacing:-.01em;margin-top:8px}
+  .rung .rnote{font-family:var(--font-sans);font-weight:300;font-size:16px;
+    line-height:1.34;color:var(--g600);margin-top:10px}
+
+  /* ---- Horizontal workflow (project lifecycle / approval) ---- */
+  .flow{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin-top:46px;max-width:1560px}
+  .fstep{flex:1;min-width:118px;border-top:1.5px solid var(--ink);padding:13px 16px 12px}
+  .fstep .fnum{font-family:var(--font-mono);font-size:11px;color:var(--g500);letter-spacing:.1em}
+  .fstep .ftext{font-family:var(--font-sans);font-weight:600;font-size:19px;
+    line-height:1.16;margin-top:9px;letter-spacing:-.01em}
+  .fstep .fsub{font-family:var(--font-sans);font-weight:300;font-size:14px;
+    color:var(--g600);margin-top:7px;line-height:1.32}
+  .farr{display:flex;align-items:center;justify-content:center;color:var(--g400);
+    font-size:20px;padding:14px 3px 0;flex:0 0 auto}
+
+  /* approval loop-back bracket */
+  .loopwrap{max-width:1560px;margin-top:6px}
+  .loopbrk{height:40px;margin:0 8% 0 12%;
+    border:1.5px solid var(--g400);border-top:0;position:relative}
+  .loopbrk::before,.loopbrk::after{content:"";position:absolute;bottom:-1px;width:0;height:0;
+    border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid var(--g400)}
+  .loopbrk::before{left:-1px;transform:translateY(1px)}
+  .loopbrk::after{right:-1px;transform:translateY(1px)}
+  .looplabel{font-family:var(--font-mono);font-size:13.5px;color:var(--g600);
+    letter-spacing:.06em;text-transform:uppercase;text-align:center;margin-top:12px;max-width:1560px}
+  .looplabel strong{color:var(--ink);font-weight:600}
+
+  /* ---- Communication channel grid ---- */
+  .grid{margin-top:40px;max-width:1560px;border-top:1.5px solid var(--ink)}
+  .grow{display:grid;grid-template-columns:1.05fr 2.15fr 0.95fr;gap:0;align-items:baseline;
+    padding:15px 0;border-bottom:1px solid var(--g200)}
+  .grow.ghead{padding:12px 0}
+  .ghead .gc{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--g500);font-weight:500}
+  .gch{font-family:var(--font-sans);font-weight:600;font-size:23px;letter-spacing:-.01em}
+  .gpurpose{font-family:var(--font-sans);font-weight:300;font-size:19px;
+    color:var(--g600);line-height:1.38;padding:0 32px}
+  .gsla{font-family:var(--font-mono);font-size:14px;color:var(--g500);
+    letter-spacing:.05em;text-transform:uppercase;text-align:right}
+  .poc{display:flex;gap:56px;margin-top:30px;flex-wrap:wrap}
+  .poc .pitem{font-family:var(--font-sans);font-weight:300;font-size:18px;color:var(--g600)}
+  .poc .pitem .plbl{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--g500);display:block;margin-bottom:5px}
+  .poc .pitem strong{font-weight:600;color:var(--ink)}
+
+  /* ---- Insight flow (bidirectional) ---- */
+  .nodes{display:flex;align-items:center;gap:54px;margin-top:48px}
+  .node{border:1.5px solid var(--ink);padding:20px 26px;min-width:220px}
+  .node .nname{font-family:var(--font-sans);font-weight:600;font-size:34px;letter-spacing:-.01em}
+  .node .ndomain{font-family:var(--font-mono);font-size:12px;color:var(--g500);letter-spacing:.08em;
+    text-transform:uppercase;margin-top:8px}
+  .swap{font-family:var(--font-sans);font-weight:300;font-size:64px;color:var(--g400);line-height:1}
+  .flows{margin-top:40px;max-width:74ch;display:flex;flex-direction:column;gap:0}
+  .flowline{font-family:var(--font-sans);font-weight:300;font-size:21px;
+    line-height:1.4;letter-spacing:-.01em;padding:15px 0;border-top:1px solid var(--g200)}
+  .flowline strong{font-weight:600}
+  .flowline .dir{font-family:var(--font-mono);font-size:13px;color:var(--g500);letter-spacing:.08em}
+
+  /* exchange graphic (slide 13) — vertical bidirectional diagram */
+  .exchange{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .xnode{border:1.5px solid var(--ink);padding:32px 34px}
+  .xlink{display:flex;align-items:center;justify-content:center;gap:30px;
+    padding:26px 0;color:var(--g400)}
+  .xlink .xarrow{font-family:var(--font-sans);font-weight:300;font-size:34px;line-height:1;color:var(--g400)}
+  .xlink .xswap{font-family:var(--font-sans);font-weight:300;font-size:52px;line-height:1;color:var(--ink)}
+
+  /* real photography — monochrome to match brand imagery vibe */
+  .figimg{position:relative;border:1px solid var(--g300);overflow:hidden;background:var(--ink)}
+  .figimg img{width:100%;height:100%;object-fit:cover;display:block;
+    filter:grayscale(1) contrast(1.06)}
+  .slide.invert .figimg{border-color:rgba(255,255,255,.24)}
+
+  /* split layout: text + image side by side */
+  .split{display:grid;grid-template-columns:1fr 0.92fr;gap:64px;align-items:center;margin-top:44px}
+  .split .txt .points{margin-top:30px}
+
+  /* ---- Closer big line ---- */
+  .bigline{font-family:var(--font-sans);font-weight:600;
+    font-size:64px;line-height:1.05;letter-spacing:-.02em;
+    margin-top:40px;max-width:19ch}
+  .hint{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--g500);margin-top:40px}
+
+  /* agenda chips (close slide) */
+  .agenda{display:flex;gap:0;margin-top:52px;max-width:1440px;border-top:1.5px solid rgba(255,255,255,.5)}
+  .aitem{flex:1;padding:22px 26px 14px;border-right:1px solid rgba(255,255,255,.18)}
+  .aitem:last-child{border-right:0}
+  .aitem .anum{font-family:var(--font-mono);font-size:12px;color:var(--g600);letter-spacing:.1em}
+  .aitem .aname{font-family:var(--font-sans);font-weight:600;font-size:30px;
+    letter-spacing:-.01em;margin-top:10px}
+
+  /* rise-in animation for content */
+  .rise{opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease, transform .6s cubic-bezier(.16,1,.3,1)}
+  .slide.active .rise{opacity:1;transform:none}
+
+  /* ---- Fixed chrome ---- */
+  .brand{position:absolute;top:52px;left:52px;z-index:20;
+    width:48px;color:var(--ink);pointer-events:none;transition:color .45s ease}
+  .brand.on-dark{color:var(--paper)}
+  .brand svg{width:100%;display:block}
+
+  .footer{position:absolute;bottom:44px;left:52px;
+    right:52px;display:flex;justify-content:space-between;align-items:center;
+    z-index:20;font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--g500);pointer-events:none;transition:color .45s ease}
+  .footer.on-dark{color:var(--g500)}
+  .counter .cur{color:var(--ink);transition:color .45s ease}
+  .footer.on-dark .counter .cur{color:var(--paper)}
+
+  .nav{display:flex;gap:8px;pointer-events:auto}
+  .nav button{width:34px;height:34px;border:1px solid var(--g400);background:transparent;
+    color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:15px;border-radius:0;transition:background .15s,border-color .15s,color .15s}
+  .nav button:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .footer.on-dark .nav button:hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+
+  /* progress bar */
+  .prog{position:absolute;top:0;left:0;height:2px;background:var(--ink);z-index:30;
+    transition:width .45s cubic-bezier(.16,1,.3,1), background .45s ease}
+  .prog.on-dark{background:var(--paper)}
+
+  /* export: flatten all slides to a clean, opaque, fixed-size state. */
+  .canvas[noscale]{transform:none !important;top:0 !important;left:0 !important;width:1920px !important;height:1080px !important}
+  .canvas[noscale] .slide{opacity:1 !important;transform:none !important;transition:none !important}
+  .canvas[noscale] .rise{opacity:1 !important;transform:none !important;transition:none !important}
+
+  @media (prefers-reduced-motion: reduce){
+    .slide,.rise,.prog{transition:opacity .2s ease}
+    .rise{transform:none}
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+  <div class="canvas" id="canvas">
+  <div class="prog" id="prog"></div>
+
+  <div class="brand" id="brand" aria-label="Friends and Enemies">
+    <svg viewBox="0 0 424.7 118.21" fill="currentColor" aria-hidden="true">
+      <rect x="101.94" y="100.35" width="214.14" height="17.86"></rect>
+      <polygon points="0 118.21 0 0 76.12 0 76.12 19.34 21.13 19.34 21.13 50.27 70.73 50.27 70.73 68.13 21.13 68.13 21.13 118.21 0 118.21"></polygon>
+      <polygon points="349.07 118.21 349.07 0 424.7 0 424.7 19.34 370.21 19.34 370.21 50.27 418.66 50.27 418.66 68.14 370.21 68.14 370.21 98.71 424.7 98.71 424.7 118.21 349.07 118.21"></polygon>
+    </svg>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- 1 — segue from Frame of Reference -->
+    <section class="slide invert closer" data-screen-label="01">
+      <div class="kick rise"><span class="num">01</span><span class="lbl">Onboarding</span><span class="rule"></span></div>
+      <div class="bigline rise" style="transition-delay:.1s">Now that we’re aligned on <em style="font-family:var(--font-serif);font-style:italic;font-weight:500">why</em> we’re here — here’s how we’ll actually work together.</div>
+    </section>
+
+    <!-- 2 — roadmap for this section -->
+    <section class="slide" data-screen-label="02">
+      <div class="kick rise"><span class="num">02</span><span class="lbl">Roadmap</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">What you’ll know by the end of this</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.14s">How we’ll operate <strong>strategically</strong> — the ongoing partnership and the rhythm behind it.</div>
+        <div class="point rise" style="transition-delay:.22s">How work gets <strong>briefed, managed, approved, and executed</strong> — the mechanics of getting things made.</div>
+      </div>
+    </section>
+
+    <!-- 3 — communication norms: the channel map -->
+    <section class="slide" data-screen-label="03">
+      <div class="kick rise"><span class="num">03</span><span class="lbl">Working norms</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Communication norms</h1>
+      <div class="sub rise" style="transition-delay:.12s">Every kind of conversation has a home — so nothing important lives in the wrong place.</div>
+      <div class="grid">
+        <div class="grow ghead rise" style="transition-delay:.18s">
+          <div class="gc">Channel</div><div class="gc gpurpose">What it’s for</div><div class="gc gsla">Response</div>
+        </div>
+        <div class="grow rise" style="transition-delay:.24s">
+          <div class="gch">Email</div>
+          <div class="gpurpose">Formal decisions, approvals, anything that needs a paper trail.</div>
+          <div class="gsla">Within 24h</div>
+        </div>
+        <div class="grow rise" style="transition-delay:.3s">
+          <div class="gch">Productive</div>
+          <div class="gpurpose">Task-specific feedback and briefs — comments and tasks tied to the work itself.</div>
+          <div class="gsla">Per task timeline</div>
+        </div>
+        <div class="grow rise" style="transition-delay:.36s">
+          <div class="gch">Scheduled calls</div>
+          <div class="gpurpose">Status updates and strategic discussion — the standing cadence.</div>
+          <div class="gsla">See next slide</div>
+        </div>
+        <div class="grow rise" style="transition-delay:.42s">
+          <div class="gch">Phone / urgent</div>
+          <div class="gpurpose">Time-sensitive, same-day issues only.</div>
+          <div class="gsla">Same day</div>
+        </div>
+      </div>
+      <div class="poc rise" style="transition-delay:.5s">
+        <div class="pitem"><span class="plbl">Primary · F&amp;E — Accounts</span><strong>Ben McEvoy</strong></div>
+        <div class="pitem"><span class="plbl">Primary · Centex — Project lead</span><strong>Cheryl Purves</strong></div>
+      </div>
+    </section>
+
+    <!-- 4 — check-ins, cadence & operating rhythm (4-tier ladder) -->
+    <section class="slide" data-screen-label="04">
+      <div class="kick rise"><span class="num">04</span><span class="lbl">Working norms</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Check-ins &amp; the operating rhythm</h1>
+      <div class="sub rise" style="transition-delay:.12s">One cadence, at four scales — with each level’s standing session labelled on it. Each has its own job; none becomes a catch-all.</div>
+      <div class="ladder">
+        <div class="rung rise" style="transition-delay:.2s;padding-bottom:0">
+          <div class="rfreq">Day-to-day</div><div class="rname">Do the work</div>
+          <div class="rnote">Async in Productive — briefs, comments, tasks.</div>
+        </div>
+        <div class="rung rise" style="transition-delay:.28s;padding-bottom:58px">
+          <div class="rfreq">Week-to-week</div><div class="rname">Track &amp; adjust</div>
+          <div class="rnote">Status touchpoint on live work.</div>
+        </div>
+        <div class="rung rise" style="transition-delay:.36s;padding-bottom:116px">
+          <div class="rfreq">Month-to-month</div><div class="rname">Coordinate</div>
+          <div class="rnote">Joint check-in across the partnership.</div>
+        </div>
+        <div class="rung rise" style="transition-delay:.44s;padding-bottom:174px">
+          <div class="rfreq">Quarter-to-quarter</div><div class="rname">Review &amp; steer</div>
+          <div class="rnote">Deeper strategic review against objectives.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 — project management: how work moves through Productive -->
+    <section class="slide" data-screen-label="05">
+      <div class="kick rise"><span class="num">05</span><span class="lbl">Getting work made</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">How work moves through Productive</h1>
+      <div class="sub rise" style="transition-delay:.12s">Productive is our client-facing home for the work — the whole life of a project, in one view Centex can see and touch.</div>
+      <div class="flow">
+        <div class="fstep rise" style="transition-delay:.2s"><div class="fnum">01</div><div class="ftext">Brief logged</div></div>
+        <div class="farr rise" style="transition-delay:.22s">→</div>
+        <div class="fstep rise" style="transition-delay:.24s"><div class="fnum">02</div><div class="ftext">Scoped &amp; scheduled</div></div>
+        <div class="farr rise" style="transition-delay:.26s">→</div>
+        <div class="fstep rise" style="transition-delay:.28s"><div class="fnum">03</div><div class="ftext">In production</div></div>
+        <div class="farr rise" style="transition-delay:.3s">→</div>
+        <div class="fstep rise" style="transition-delay:.32s"><div class="fnum">04</div><div class="ftext">Reviewed</div><div class="fsub">See approval process →</div></div>
+        <div class="farr rise" style="transition-delay:.34s">→</div>
+        <div class="fstep rise" style="transition-delay:.36s"><div class="fnum">05</div><div class="ftext">Delivered</div></div>
+        <div class="farr rise" style="transition-delay:.38s">→</div>
+        <div class="fstep rise" style="transition-delay:.4s"><div class="fnum">06</div><div class="ftext">Closed out</div></div>
+      </div>
+    </section>
+
+    <!-- 6 — approval process (two-pass loop) -->
+    <section class="slide" data-screen-label="06">
+      <div class="kick rise"><span class="num">06</span><span class="lbl">Getting work made</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Approval process</h1>
+      <div class="sub rise" style="transition-delay:.12s">Zoomed into the review stage. Revisions aren’t a failure state — they’re a built-in pass through the loop.</div>
+      <div class="flow">
+        <div class="fstep rise" style="transition-delay:.2s"><div class="fnum">01</div><div class="ftext">Preliminary effort</div></div>
+        <div class="farr rise" style="transition-delay:.22s">→</div>
+        <div class="fstep rise" style="transition-delay:.24s"><div class="fnum">02</div><div class="ftext">Internal review</div></div>
+        <div class="farr rise" style="transition-delay:.26s">→</div>
+        <div class="fstep rise" style="transition-delay:.28s"><div class="fnum">03</div><div class="ftext">Client presentation</div></div>
+        <div class="farr rise" style="transition-delay:.3s">→</div>
+        <div class="fstep rise" style="transition-delay:.32s"><div class="fnum">04</div><div class="ftext">Client review</div></div>
+        <div class="farr rise" style="transition-delay:.34s">→</div>
+        <div class="fstep rise" style="transition-delay:.36s"><div class="fnum">05</div><div class="ftext">Client feedback</div></div>
+        <div class="farr rise" style="transition-delay:.38s">→</div>
+        <div class="fstep rise" style="transition-delay:.4s"><div class="fnum">06</div><div class="ftext">Approval</div></div>
+      </div>
+      <div class="loopwrap rise" style="transition-delay:.48s">
+        <div class="loopbrk"></div>
+        <div class="looplabel"><strong>Refinement loop</strong> — feedback sends the work back through internal review, presentation and review, as many passes as agreed, until approved.</div>
+      </div>
+    </section>
+
+    <!-- 7 — TWO LAYERS. ONE RELATIONSHIP. (strategic-layer opener) -->
+    <section class="slide invert closer" data-screen-label="07">
+      <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:120px;align-items:center">
+        <div>
+          <div class="kick rise"><span class="num">07</span><span class="lbl">Section</span><span class="rule"></span></div>
+          <h1 class="head rise" style="transition-delay:.1s">Two layers. One relationship.</h1>
+          <div class="sub rise" style="transition-delay:.2s;margin-top:34px">Everything from here splits into two tracks — ongoing strategic work, and time-boxed project execution.</div>
+        </div>
+        <div class="tracks rise" style="transition-delay:.32s">
+          <div class="track">
+            <span class="tlbl">Strategy</span>
+            <div class="tname">Retained Services</div>
+          </div>
+          <div class="track">
+            <span class="tlbl">Execution</span>
+            <div class="tname">Scoped projects</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 — the retained strategic layer (what it is + how it runs) -->
+    <section class="slide" data-screen-label="08">
+      <div class="kick rise"><span class="num">08</span><span class="lbl">Retained · Strategic</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">The retained strategic layer</h1>
+      <div class="sub rise" style="transition-delay:.12s">An ongoing partnership focused on finding opportunities — not a fixed scope of deliverables. It runs in two directions at once.</div>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.2s">
+          <div class="cnum">Push</div>
+          <div class="cname">Proactive</div>
+          <div class="cbody">Ideas and opportunities we bring forward, without being asked.</div>
+        </div>
+        <div class="col rise" style="transition-delay:.28s">
+          <div class="cnum">Pull</div>
+          <div class="cname">Reactive</div>
+          <div class="cbody">Requests we respond to as they come in from Centex.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 — EXECUTION: SCOPED WORK (execution-layer opener; matched pair with 7) -->
+    <section class="slide invert closer" data-screen-label="09">
+      <div class="kick rise"><span class="num">09</span><span class="lbl">Section</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.1s">Execution: scoped work</h1>
+      <div class="sub rise" style="transition-delay:.2s">The second layer, named directly — work that gets scoped, given a timeline, and closed out.</div>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.3s">Milestone- and timeline-based — <strong>the opposite operating mode from the ongoing strategic layer.</strong></div>
+      </div>
+    </section>
+
+    <!-- 10 — from brief to activation (brief & discovery + SOW, as one process) -->
+    <section class="slide" data-screen-label="10">
+      <div class="kick rise"><span class="num">10</span><span class="lbl">Project · Execution</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">From brief to activation</h1>
+      <div class="sub rise" style="transition-delay:.12s">Every project starts by identifying the opportunity clearly — then activates it through a scoped project that feeds the Productive workflow and approval process from earlier.</div>
+      <div class="flow" style="max-width:1560px">
+        <div class="fstep rise" style="transition-delay:.2s"><div class="fnum">01</div><div class="ftext">Brief &amp; discovery</div><div class="fsub">Understand before doing anything.</div></div>
+        <div class="farr rise" style="transition-delay:.26s">→</div>
+        <div class="fstep rise" style="transition-delay:.32s"><div class="fnum">02</div><div class="ftext">Identified opportunity</div><div class="fsub">Tied back to strategic objectives.</div></div>
+        <div class="farr rise" style="transition-delay:.38s">→</div>
+        <div class="fstep rise" style="transition-delay:.44s"><div class="fnum">03</div><div class="ftext">Scoped project (SOW)</div><div class="fsub">Brand, website, campaign — timeline-based.</div></div>
+      </div>
+    </section>
+
+    <!-- 11 — TWO RACEHORSES, ONE WAGON (section opener + core metaphor + neither pulls alone) -->
+    <section class="slide invert closer" data-screen-label="11">
+      <div class="kick rise"><span class="num">11</span><span class="lbl">Agency to agency</span><span class="rule"></span></div>
+      <div class="split" style="margin-top:16px">
+        <div class="txt">
+          <h1 class="head sm rise" style="transition-delay:.1s">Two racehorses, one&nbsp;wagon</h1>
+          <div class="sub rise" style="transition-delay:.18s">Centex hired two racehorses — F&amp;E and Prospect — harnessed to one wagon: its business and marketing objectives.</div>
+          <div class="cols" style="border-color:rgba(255,255,255,.5)">
+            <div class="col rise" style="transition-delay:.26s">
+              <div class="cnum">Prospect</div><div class="cname">Media &amp; analytics</div>
+            </div>
+            <div class="col rise" style="transition-delay:.32s">
+              <div class="cnum">Friends + Enemies</div><div class="cname">Creative &amp; brand</div>
+            </div>
+          </div>
+          <div class="fnote rise" style="transition-delay:.4s">Complementary, not redundant. If one horse stops pulling, the wagon slows — it doesn’t get replaced by the other.</div>
+        </div>
+        <div class="figimg rise" style="transition-delay:.3s;min-height:480px;height:100%">
+          <img src="../assets/deck-onboarding/team-wagon.jpg" alt="Two horses in harness pulling a single wagon">
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 — the harness: our cadence together (3-tier ladder, matched pair with slide 4) -->
+    <section class="slide" data-screen-label="12">
+      <div class="kick rise"><span class="num">12</span><span class="lbl">Agency to agency</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">The harness — our cadence together</h1>
+      <div class="sub rise" style="transition-delay:.12s">The harness is what keeps two horses pulling together instead of apart: our cadence of touchbases with each other.</div>
+      <div class="ladder">
+        <div class="rung rise" style="transition-delay:.2s;padding-bottom:0">
+          <div class="rfreq">Monthly</div><div class="rname">Internal touchbase</div>
+          <div class="rnote">F&amp;E + Prospect — just the two agencies, no Centex in the room.</div>
+        </div>
+        <div class="rung rise" style="transition-delay:.3s;padding-bottom:90px">
+          <div class="rfreq">Monthly</div><div class="rname">Joint client touchbase</div>
+          <div class="rnote">F&amp;E + Prospect + Centex together — the pace-check with the driver.</div>
+        </div>
+        <div class="rung rise" style="transition-delay:.4s;padding-bottom:178px">
+          <div class="rfreq">Quarterly</div><div class="rname">Media + insights review</div>
+          <div class="rnote">Full multi-agency team, read against business &amp; marketing objectives, shared back to leadership.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 — how insight moves between us (bidirectional) -->
+    <section class="slide" data-screen-label="13">
+      <div class="kick rise"><span class="num">13</span><span class="lbl">Agency to agency</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <h1 class="head sm rise" style="transition-delay:.06s">How insight moves between us</h1>
+          <div class="flows">
+            <div class="flowline rise" style="transition-delay:.24s"><span class="dir">PROSPECT → F&amp;E&nbsp;&nbsp;</span> Media and analytics insight surfaces; <strong>F&amp;E evaluates it and responds with creative.</strong></div>
+            <div class="flowline rise" style="transition-delay:.3s"><span class="dir">F&amp;E + CENTEX → PROSPECT&nbsp;&nbsp;</span> Reactive ideas (WJC-style requests) get raised; <strong>Prospect evaluates them through a media lens.</strong></div>
+            <div class="flowline rise" style="transition-delay:.36s">It runs both directions — <strong>neither agency just waits to be handed something.</strong></div>
+          </div>
+        </div>
+        <div class="exchange rise" style="transition-delay:.2s">
+          <div class="xnode"><div class="nname">Prospect</div><div class="ndomain">Media &amp; analytics</div></div>
+          <div class="xlink"><span class="xarrow">↓</span><span class="xswap">⇄</span><span class="xarrow">↑</span></div>
+          <div class="xnode"><div class="nname">Friends + Enemies</div><div class="ndomain">Creative &amp; brand</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 — where the wagon is headed (payoff of the motif) -->
+    <section class="slide" data-screen-label="14">
+      <div class="kick rise"><span class="num">14</span><span class="lbl">The destination</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <h1 class="head sm rise" style="transition-delay:.06s">Where the wagon is headed</h1>
+          <div class="points">
+            <div class="point rise" style="transition-delay:.18s">The destination is the shared one-year horizon tied to Centex’s major objectives — <strong>not either agency’s individual output.</strong></div>
+          </div>
+          <div class="hint rise" style="transition-delay:.28s;color:var(--g500)">Strategic outcomes, not account management — one more time.</div>
+        </div>
+        <div class="figimg rise" style="transition-delay:.3s;min-height:420px;height:100%">
+          <img src="../assets/deck-onboarding/toward-horizon.jpg" alt="A wagon pulled by horses heading down a road toward the horizon">
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 — close: into today's agenda -->
+    <section class="slide invert closer" data-screen-label="15">
+      <div class="kick rise"><span class="num">15</span><span class="lbl">Onward</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.1s">Now — into today.</h1>
+      <div class="sub rise" style="transition-delay:.2s">That’s how we’ll work together. Here’s what’s actually happening for the rest of the day.</div>
+      <div class="agenda">
+        <div class="aitem rise" style="transition-delay:.3s"><div class="anum">Next</div><div class="aname">Media 101</div></div>
+        <div class="aitem rise" style="transition-delay:.36s"><div class="anum">Then</div><div class="aname">Creative 101</div></div>
+        <div class="aitem rise" style="transition-delay:.42s"><div class="anum">After</div><div class="aname">Discovery</div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="footer" id="footer">
+    <div class="counter"><span class="cur" id="cur">01</span> / <span id="total">15</span></div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous slide">←</button>
+      <button id="next" aria-label="Next slide">→</button>
+    </div>
+  </div>
+
+  </div><!-- /canvas -->
+  </div><!-- /viewport -->
+
+<script>
+(function(){
+  var canvas = document.getElementById('canvas');
+  function fit(){
+    if(canvas.hasAttribute('noscale')) return;
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    canvas.style.transform = 'translate(-50%,-50%) scale('+s+')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var prog = document.getElementById('prog');
+  var brand = document.getElementById('brand');
+  var footer = document.getElementById('footer');
+  var curEl = document.getElementById('cur');
+  document.getElementById('total').textContent = String(total).padStart(2,'0');
+
+  function pad(n){return String(n+1).padStart(2,'0');}
+
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.remove('active','before','after');
+      if(i===cur) s.classList.add('active');
+      else if(i<cur) s.classList.add('before');
+      else s.classList.add('after');
+    });
+    var dark = slides[cur].classList.contains('invert');
+    brand.classList.toggle('on-dark',dark);
+    footer.classList.toggle('on-dark',dark);
+    prog.classList.toggle('on-dark',dark);
+    prog.style.width = ((cur)/(total-1)*100) + '%';
+    curEl.textContent = pad(cur);
+  }
+
+  function go(n){
+    cur = Math.max(0, Math.min(total-1, n));
+    render();
+  }
+  function next(){ if(cur<total-1) go(cur+1); }
+  function prev(){ if(cur>0) go(cur-1); }
+
+  document.getElementById('next').addEventListener('click', function(e){e.stopPropagation();next();});
+  document.getElementById('prev').addEventListener('click', function(e){e.stopPropagation();prev();});
+
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav')) return;
+    next();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key===' '||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(total-1);}
+  });
+
+  window.__deckGo = go;
+  render();
+})();
+</script>
+</body>
+</html>

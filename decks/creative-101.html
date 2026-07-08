@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creative 101 — Friends &amp; Enemies</title>
+<style>
+  /* ---- Brand fonts (Friends & Enemies design system) ---- */
+  @font-face{font-family:"Outfit";src:url("../assets/fonts/Outfit-VariableFont_wght.ttf") format("truetype-variations");font-weight:100 900;font-display:swap}
+  @font-face{font-family:"EB Garamond";src:url("../assets/fonts/EBGaramond-Italic-VariableFont_wght.ttf") format("truetype-variations");font-weight:400 800;font-style:italic;font-display:swap}
+  @font-face{font-family:"Source Code Pro";src:url("../assets/fonts/SourceCodePro-VariableFont_wght.ttf") format("truetype-variations");font-weight:200 900;font-display:swap}
+
+  :root{
+    --ink:#111111; --paper:#ffffff; --paper-warm:#faf9f7;
+    --g200:#e6e5e3; --g300:#d4d4d4; --g400:#b0b0b0; --g500:#8a8a8a; --g600:#666666; --g800:#2b2b2b;
+    --font-sans:"Outfit","Helvetica Neue",Arial,sans-serif;
+    --font-serif:"EB Garamond",Georgia,serif;
+    --font-mono:"Source Code Pro",ui-monospace,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper-warm); color:var(--ink);
+    font-family:var(--font-sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--ink);color:var(--paper)}
+
+  /* fixed-canvas scaling: 1920x1080 canvas, uniformly scaled to fit any viewport */
+  .viewport{position:fixed;inset:0;background:#000;overflow:hidden}
+  .canvas{position:absolute;top:50%;left:50%;width:1920px;height:1080px;
+    transform-origin:center center;background:var(--paper-warm);overflow:hidden}
+  .stage{position:absolute;inset:0}
+
+  /* ---- Slide base ---- */
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:120px;
+    opacity:0;transform:translateX(48px);
+    transition:opacity .45s ease, transform .48s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .slide.before{transform:translateX(-48px)}
+  .slide.after{transform:translateX(48px)}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+
+  /* closing / soft-beat slides: cross-fade, no slide */
+  .slide.closer{transform:none !important;transition:opacity .85s ease}
+
+  /* dark bookends / section turns */
+  .slide.invert{background:var(--ink);color:var(--paper)}
+  .slide.invert .kick .lbl{color:var(--g400)}
+  .slide.invert .kick .num{color:var(--g600)}
+  .slide.invert .sub{color:var(--g400)}
+  .slide.invert .rule{background:rgba(255,255,255,.16)}
+  .slide.invert .point{border-color:rgba(255,255,255,.14)}
+  .slide.invert .chip{border-color:rgba(255,255,255,.28);color:var(--paper)}
+  .slide.invert .arrow{color:var(--g500)}
+  .slide.invert .col{border-color:rgba(255,255,255,.18)}
+  .slide.invert .cols{border-color:rgba(255,255,255,.5)}
+  .slide.invert .col .cnum{color:var(--g500)}
+  .slide.invert .col .cbody{color:var(--g400)}
+
+  /* ---- Kicker ---- */
+  .kick{display:flex;align-items:center;gap:14px;
+    font-family:var(--font-mono);font-size:13px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:40px}
+  .kick .num{color:var(--g500)}
+  .kick .lbl{color:var(--g600)}
+  .kick .rule{flex:1;height:1px;background:var(--g300);max-width:280px}
+
+  /* ---- Headline ---- */
+  h1.head{
+    font-family:var(--font-sans);font-weight:600;
+    font-size:66px;line-height:1.04;letter-spacing:-.02em;
+    margin:0;max-width:20ch;text-wrap:balance;
+  }
+  h1.head.sm{font-size:54px}
+  .sub{font-family:var(--font-sans);font-weight:300;color:var(--g600);
+    font-size:22px;margin-top:14px;letter-spacing:-.01em;max-width:54ch}
+
+  /* ---- Supporting points ---- */
+  .points{margin-top:40px;max-width:64ch;display:flex;flex-direction:column}
+  .point{
+    font-family:var(--font-sans);font-weight:300;
+    font-size:23px;line-height:1.42;letter-spacing:-.01em;
+    padding:15px 0;border-top:1px solid var(--g200);
+  }
+  .point:first-child{border-top:0}
+  .point strong{font-weight:600}
+
+  /* ---- Pull quote ---- */
+  .quote{margin-top:40px;max-width:30ch}
+  .quote q{font-family:var(--font-serif);font-style:italic;font-weight:500;
+    font-size:46px;line-height:1.16;quotes:none}
+  .quote q::before,.quote q::after{content:""}
+  .quote .cite{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--g500);margin-top:18px}
+
+  /* ---- Columns (2/3-up) ---- */
+  .cols{display:flex;gap:0;margin-top:48px;max-width:1000px;border-top:1.5px solid var(--ink)}
+  .col{flex:1;padding:24px 30px 12px;border-right:1px solid var(--g300)}
+  .col:last-child{border-right:0}
+  .col .cnum{font-family:var(--font-mono);font-size:12px;color:var(--g500);letter-spacing:.1em;text-transform:uppercase}
+  .col .cname{font-family:var(--font-sans);font-weight:600;font-size:34px;letter-spacing:-.01em;margin-top:10px}
+  .col .cbody{font-family:var(--font-sans);font-weight:300;font-size:19px;
+    line-height:1.42;color:var(--g600);margin-top:12px}
+
+  /* ---- Workflow / flow chips ---- */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin-top:44px;max-width:1000px}
+  .chip{font-family:var(--font-mono);font-size:15px;font-weight:500;
+    letter-spacing:.04em;padding:9px 15px;border:1px solid var(--ink);white-space:nowrap}
+  .arrow{color:var(--g400);font-size:18px;line-height:1}
+
+  /* ---- Funnel / flywheel stages ---- */
+  .funnel{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:56px}
+  .stage-item{font-family:var(--font-sans);font-weight:500;
+    font-size:38px;letter-spacing:-.01em}
+  .stage-item.loop{color:var(--g400)}
+  .fnote{font-family:var(--font-serif);font-style:italic;color:var(--g600);
+    font-size:24px;margin-top:34px;max-width:48ch}
+  .slide.invert .fnote{color:var(--g400)}
+
+  /* ---- Signal / noise field diagram ---- */
+  .field{width:100%;max-width:980px;height:440px;display:block;
+    margin-top:34px;color:var(--ink)}
+  .slide.invert .field{color:var(--paper)}
+  .slide.fieldbg{overflow:hidden}
+  .fieldwrap{position:absolute;inset:0;z-index:0;pointer-events:none;color:var(--ink)}
+  .fieldwrap svg{width:100%;height:100%;display:block}
+  .slide.fieldbg .txt{position:relative;z-index:1;max-width:57%}
+
+  /* ---- embedded reference diagrams (flat monochrome) ---- */
+  .diagram{width:100%;display:flex;justify-content:center;margin-top:34px}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram.venn{max-width:1320px}
+  .diagram.proc{max-width:1120px}
+  .diagram.diam{max-width:1120px}
+  .diagram.funnelbig{max-width:none}
+  .diagram.funnelbig svg{width:auto;height:600px;max-width:100%}
+  .dsplit{display:grid;grid-template-columns:1fr 0.82fr;gap:68px;align-items:center;margin-top:36px}
+  .dsplit .point{border-top:0;padding:9px 0;font-size:22px}
+  .dsplit .dfig{display:flex;align-items:center;justify-content:center}
+  .dsplit .dfig svg{width:100%;height:auto;max-height:540px;display:block}
+
+  /* ---- Domains formula ---- */
+  .formula{display:flex;align-items:flex-start;gap:20px;
+    margin-top:52px;flex-wrap:nowrap;max-width:1080px}
+  .paren{font-family:var(--font-sans);font-weight:200;line-height:.82;
+    font-size:150px;color:var(--g400)}
+  .dom{border-top:1.5px solid var(--ink);padding-top:14px;flex:1;min-width:0}
+  .dom .dname{font-family:var(--font-sans);font-weight:600;
+    font-size:38px;letter-spacing:-.01em}
+  .dom .dparts{font-family:var(--font-mono);font-size:15px;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--g500);margin-top:10px}
+  .op{font-family:var(--font-sans);font-weight:200;color:var(--g400);
+    font-size:46px;align-self:center;line-height:1}
+  .expo{font-family:var(--font-sans);font-weight:600;letter-spacing:-.01em;
+    font-size:25px;line-height:1;margin-left:3px}
+  .fcap{font-family:var(--font-sans);font-weight:300;color:var(--g600);
+    font-size:21px;line-height:1.42;margin-top:40px;max-width:62ch}
+  .fcap strong{font-weight:600;color:var(--ink)}
+
+  /* ---- Closer big line ---- */
+  .bigline{font-family:var(--font-sans);font-weight:600;
+    font-size:64px;line-height:1.05;letter-spacing:-.02em;
+    margin-top:40px;max-width:19ch}
+  .hint{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--g500);margin-top:40px}
+
+  /* rise-in animation for content */
+  .rise{opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease, transform .6s cubic-bezier(.16,1,.3,1)}
+  .slide.active .rise{opacity:1;transform:none}
+
+  /* ---- Fixed chrome ---- */
+  .brand{position:absolute;top:52px;left:52px;z-index:20;
+    width:48px;color:var(--ink);pointer-events:none;transition:color .45s ease}
+  .brand.on-dark{color:var(--paper)}
+  .brand svg{width:100%;display:block}
+
+  .footer{position:absolute;bottom:44px;left:52px;
+    right:52px;display:flex;justify-content:space-between;align-items:center;
+    z-index:20;font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--g500);pointer-events:none;transition:color .45s ease}
+  .footer.on-dark{color:var(--g500)}
+  .counter .cur{color:var(--ink);transition:color .45s ease}
+  .footer.on-dark .counter .cur{color:var(--paper)}
+
+  .nav{display:flex;gap:8px;pointer-events:auto}
+  .nav button{width:34px;height:34px;border:1px solid var(--g400);background:transparent;
+    color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:15px;border-radius:0;transition:background .15s,border-color .15s,color .15s}
+  .nav button:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .footer.on-dark .nav button:hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+
+  /* progress bar */
+  .prog{position:absolute;top:0;left:0;height:2px;background:var(--ink);z-index:30;
+    transition:width .45s cubic-bezier(.16,1,.3,1), background .45s ease}
+  .prog.on-dark{background:var(--paper)}
+
+  /* ---- Placeholder slot (assets / content to be added) ---- */
+  .slot{margin-top:36px;border:1.5px dashed var(--g400);background:rgba(17,17,17,.03);
+    padding:22px 26px;max-width:860px;display:flex;align-items:center;gap:16px;min-height:104px}
+  .slot .stag{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--paper);background:var(--ink);padding:5px 9px;white-space:nowrap}
+  .slot .stx{font-family:var(--font-sans);font-weight:300;font-size:19px;color:var(--g600);line-height:1.4}
+  .slide.invert .slot{border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.05)}
+  .slide.invert .slot .stag{background:var(--paper);color:var(--ink)}
+  .slide.invert .slot .stx{color:var(--g400)}
+
+  /* export: flatten all slides to a clean, opaque, fixed-size state. */
+  .canvas[noscale]{transform:none !important;top:0 !important;left:0 !important;width:1920px !important;height:1080px !important}
+  .canvas[noscale] .slide{opacity:1 !important;transform:none !important;transition:none !important}
+  .canvas[noscale] .rise{opacity:1 !important;transform:none !important;transition:none !important}
+
+  @media (prefers-reduced-motion: reduce){
+    .slide,.rise,.prog{transition:opacity .2s ease}
+    .rise{transform:none}
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+  <div class="canvas" id="canvas">
+  <div class="prog" id="prog"></div>
+
+  <div class="brand" id="brand" aria-label="Friends and Enemies">
+    <svg viewBox="0 0 424.7 118.21" fill="currentColor" aria-hidden="true">
+      <rect x="101.94" y="100.35" width="214.14" height="17.86"></rect>
+      <polygon points="0 118.21 0 0 76.12 0 76.12 19.34 21.13 19.34 21.13 50.27 70.73 50.27 70.73 68.13 21.13 68.13 21.13 118.21 0 118.21"></polygon>
+      <polygon points="349.07 118.21 349.07 0 424.7 0 424.7 19.34 370.21 19.34 370.21 50.27 418.66 50.27 418.66 68.14 370.21 68.14 370.21 98.71 424.7 98.71 424.7 118.21 349.07 118.21"></polygon>
+    </svg>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- 1 — attention is divided -->
+    <section class="slide invert" data-screen-label="01">
+      <div class="kick rise"><span class="num">01</span><span class="lbl">Creative 101 · The problem</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Attention is divided</h1>
+      <div class="sub rise" style="transition-delay:.12s">Everyone’s fighting for a shrinking sliver of it — audiences and brands in the same crowded field, everything shouting at once.</div>
+      <svg class="field rise" style="transition-delay:.22s" viewBox="0 0 1000 440" fill="none" stroke="currentColor" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="172" cy="197" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="172" cy="197" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="172" cy="197" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="409" cy="341" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="409" cy="341" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="409" cy="341" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="105" cy="329" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="105" cy="329" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="105" cy="329" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="494" cy="106" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="494" cy="106" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="494" cy="106" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="303" cy="220" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="303" cy="220" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="303" cy="220" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="893" cy="376" r="42" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.34"/><circle cx="893" cy="376" r="74" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.25"/><circle cx="893" cy="376" r="108" stroke-width="1" stroke-dasharray="1.5 7" opacity="0.16"/><circle cx="321" cy="320" r="14" stroke-width="1.5" opacity="0.55"/><circle cx="500" cy="238" r="11" stroke-width="1.5" opacity="0.55"/><circle cx="119" cy="60" r="17" stroke-width="1.5" opacity="0.55"/><circle cx="605" cy="301" r="15" stroke-width="1.5" opacity="0.55"/><circle cx="679" cy="112" r="13" stroke-width="1.5" opacity="0.55"/><circle cx="264" cy="208" r="17" stroke-width="1.5" opacity="0.55"/><circle cx="544" cy="313" r="14" stroke-width="1.5" opacity="0.55"/><circle cx="850" cy="278" r="13" stroke-width="1.5" opacity="0.55"/><circle cx="452" cy="123" r="16" stroke-width="1.5" opacity="0.55"/><circle cx="404" cy="79" r="12" stroke-width="1.5" opacity="0.55"/><circle cx="186" cy="208" r="12" stroke-width="1.5" opacity="0.55"/><circle cx="940" cy="43" r="17" stroke-width="1.5" opacity="0.55"/><circle cx="108" cy="139" r="10" stroke-width="1.5" opacity="0.55"/><circle cx="806" cy="226" r="17" stroke-width="1.5" opacity="0.55"/><circle cx="340" cy="180" r="11" stroke-width="1.5" opacity="0.55"/><circle cx="381" cy="375" r="10" stroke-width="1.5" opacity="0.55"/><circle cx="636" cy="70" r="13" stroke-width="1.5" opacity="0.55"/><rect x="159" y="184" width="27" height="27" stroke-width="1.75" opacity="0.9"/><rect x="398" y="330" width="22" height="22" stroke-width="1.75" opacity="0.9"/><rect x="91" y="316" width="26" height="26" stroke-width="1.75" opacity="0.9"/><rect x="477" y="90" width="33" height="33" stroke-width="1.75" opacity="0.9"/><rect x="288" y="206" width="29" height="29" stroke-width="1.75" opacity="0.9"/><rect x="881" y="363" width="25" height="25" stroke-width="1.75" opacity="0.9"/></svg>
+    </section>
+
+    <!-- 2 — signal vs. noise -->
+    <section class="slide fieldbg" data-screen-label="02">
+      <div class="fieldwrap" aria-hidden="true"><svg viewBox="0 0 1000 560" fill="none" stroke="currentColor" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="610" cy="168" r="18" stroke-width="1.25" opacity="0.13"/><circle cx="432" cy="442" r="11" stroke-width="1.25" opacity="0.13"/><circle cx="116" cy="207" r="10" stroke-width="1.25" opacity="0.13"/><circle cx="194" cy="359" r="11" stroke-width="1.25" opacity="0.13"/><circle cx="740" cy="188" r="10" stroke-width="1.25" opacity="0.13"/><circle cx="561" cy="487" r="14" stroke-width="1.25" opacity="0.13"/><circle cx="580" cy="283" r="13" stroke-width="1.25" opacity="0.13"/><circle cx="345" cy="56" r="15" stroke-width="1.25" opacity="0.13"/><circle cx="573" cy="345" r="10" stroke-width="1.25" opacity="0.13"/><circle cx="670" cy="305" r="17" stroke-width="1.25" opacity="0.13"/><circle cx="511" cy="454" r="16" stroke-width="1.25" opacity="0.13"/><circle cx="457" cy="261" r="11" stroke-width="1.25" opacity="0.13"/><circle cx="255" cy="48" r="11" stroke-width="1.25" opacity="0.13"/><circle cx="732" cy="507" r="18" stroke-width="1.25" opacity="0.13"/><circle cx="929" cy="68" r="10" stroke-width="1.25" opacity="0.13"/><circle cx="628" cy="223" r="12" stroke-width="1.25" opacity="0.13"/><circle cx="374" cy="165" r="9" stroke-width="1.25" opacity="0.13"/><circle cx="149" cy="132" r="16" stroke-width="1.25" opacity="0.13"/><circle cx="690" cy="216" r="10" stroke-width="1.25" opacity="0.13"/><circle cx="437" cy="189" r="14" stroke-width="1.25" opacity="0.13"/><rect x="597" y="203" width="24" height="24" stroke-width="1.25" opacity="0.13"/><rect x="456" y="375" width="31" height="31" stroke-width="1.25" opacity="0.13"/><rect x="443" y="100" width="26" height="26" stroke-width="1.25" opacity="0.13"/><rect x="285" y="184" width="31" height="31" stroke-width="1.25" opacity="0.13"/><rect x="79" y="303" width="29" height="29" stroke-width="1.25" opacity="0.13"/><rect x="239" y="374" width="30" height="30" stroke-width="1.25" opacity="0.13"/><rect x="137" y="109" width="27" height="27" stroke-width="1.25" opacity="0.13"/><line x1="742" y1="292" x2="602" y2="150" stroke-width="1.5" stroke-dasharray="2 6" opacity="0.9"/><line x1="742" y1="292" x2="918" y2="224" stroke-width="1.5" stroke-dasharray="2 6" opacity="0.9"/><line x1="742" y1="292" x2="872" y2="432" stroke-width="1.5" stroke-dasharray="2 6" opacity="0.9"/><line x1="742" y1="292" x2="612" y2="430" stroke-width="1.5" stroke-dasharray="2 6" opacity="0.9"/><circle cx="602" cy="150" r="16" stroke-width="2" opacity="1"/><circle cx="602" cy="150" r="3.5" fill="currentColor" stroke="none"/><circle cx="918" cy="224" r="14" stroke-width="2" opacity="1"/><circle cx="918" cy="224" r="3.5" fill="currentColor" stroke="none"/><circle cx="872" cy="432" r="17" stroke-width="2" opacity="1"/><circle cx="872" cy="432" r="3.5" fill="currentColor" stroke="none"/><circle cx="612" cy="430" r="13" stroke-width="2" opacity="1"/><circle cx="612" cy="430" r="3.5" fill="currentColor" stroke="none"/><rect x="725" y="275" width="34" height="34" fill="currentColor" stroke="none"/></svg></div>
+      <div class="txt">
+        <div class="kick rise"><span class="num">02</span><span class="lbl">The problem</span><span class="rule"></span></div>
+        <h1 class="head sm rise" style="transition-delay:.06s">You can’t just make noise — you need signal</h1>
+        <div class="points">
+          <div class="point rise" style="transition-delay:.14s"><strong>Noise</strong> is broadcasting into the crowd and hoping something sticks — one more indistinguishable circle in a field that’s already full. Nobody notices, and it costs nothing to ignore.</div>
+          <div class="point rise" style="transition-delay:.22s"><strong>Signal</strong> is built to connect with a specific person, not shaped to maximize reach. It isn’t louder — it’s more precise. Fewer people, on purpose. That’s exactly why it gets through.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 — signal needs a source and a recipient -->
+    <section class="slide" data-screen-label="03">
+      <div class="kick rise"><span class="num">03</span><span class="lbl">The definition</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Signal needs a source and a recipient</h1>
+      <div class="sub rise" style="transition-delay:.12s">To connect, signal needs both ends of the line. Skip either one and there’s nothing to connect.</div>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.18s">
+          <div class="cnum">Source</div>
+          <div class="cname">Who You Are</div>
+          <div class="cbody">The brand. What you stand for, and what makes you worth paying attention to.</div>
+        </div>
+        <div class="col rise" style="transition-delay:.26s">
+          <div class="cnum">Recipient</div>
+          <div class="cname">Who You’re For</div>
+          <div class="cbody">The audience. The specific people the signal is built to reach.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 — why creative matters (not just taste) -->
+    <section class="slide" data-screen-label="04">
+      <div class="kick rise"><span class="num">04</span><span class="lbl">The definition</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Why creative matters — and it’s not just taste</h1>
+      <div class="flow rise" style="transition-delay:.16s">
+        <span class="chip">Insight from real life</span><span class="arrow">→</span>
+        <span class="chip">Creative — the bridge</span><span class="arrow">→</span>
+        <span class="chip">The audience acts</span>
+      </div>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.24s">It starts with an <strong>insight</strong> from the audience’s real life — something true and specific about how they think or behave, not a demographic stat.</div>
+        <div class="point rise" style="transition-delay:.32s">Creative is the <strong>bridge</strong>: it ties that insight to the brand, and to a message, moment, or outcome the brand can own — to get the audience to act.</div>
+        <div class="point rise" style="transition-delay:.4s">So it can’t be judged on taste alone. The test is whether it’s rooted in a real insight and built to move someone — <strong>a business question, not an aesthetic one.</strong></div>
+      </div>
+    </section>
+
+    <!-- 5 — section turn: how we find & build it -->
+    <section class="slide invert" data-screen-label="05">
+      <div class="kick rise"><span class="num">05</span><span class="lbl">The toolkit</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.1s">So how do we find that creative?</h1>
+      <div class="sub rise" style="transition-delay:.2s">Not from a mood board — from a process. What follows is method, not vibes.</div>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.28s">Understand the brand itself, and understand the audience.</div>
+        <div class="point rise" style="transition-delay:.36s">Test before committing — and build for repeat behavior, not a single moment.</div>
+      </div>
+    </section>
+
+    <!-- 6 — Brand 101 (content TBD) -->
+    <section class="slide" data-screen-label="06">
+      <div class="kick rise"><span class="num">06</span><span class="lbl">Toolkit · Understand the brand</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Brand strategy</h1>
+      <div class="diagram venn rise" style="transition-delay:.16s"><svg viewBox="-60 0 1120 520" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><rect x="199" y="46" width="602" height="398" rx="199" stroke="#c9c7c4" stroke-width="1.5" stroke-dasharray="2 7"/><rect x="173" y="20" width="654" height="450" rx="225" stroke="#c9c7c4" stroke-width="1.5" stroke-dasharray="2 7"/><circle cx="398" cy="245" r="165" fill="#9a9a9a"/><circle cx="602" cy="245" r="165" fill="#9a9a9a"/><clipPath id="cL"><circle cx="398" cy="245" r="165"/></clipPath><g clip-path="url(#cL)"><circle cx="602" cy="245" r="165" fill="#3a3a3a"/></g><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="27" fill="#fff"><tspan x="360" y="220.2">Customer</tspan></text><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="20" fill="#fff"><tspan x="360" y="262.2">What consumers</tspan><tspan x="360" y="285.4">care about?</tspan></text><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="27" fill="#fff"><tspan x="640" y="220.2">Brand</tspan></text><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="20" fill="#fff"><tspan x="640" y="262.2">What do you do better</tspan><tspan x="640" y="285.4">than anybody else?</tspan></text><line x1="150" y1="245" x2="173" y2="245" stroke="#3a3a3a" stroke-width="1.25"/><text text-anchor="end" font-family="Outfit, sans-serif" font-weight="400" font-size="22" fill="#111"><tspan x="140" y="237">What&#8217;s going</tspan><tspan x="140" y="265">on in the world</tspan></text><line x1="827" y1="245" x2="850" y2="245" stroke="#3a3a3a" stroke-width="1.25"/><text text-anchor="start" font-family="Outfit, sans-serif" font-weight="400" font-size="22" fill="#111"><tspan x="860" y="237">What&#8217;s going on in</tspan><tspan x="860" y="265">your category</tspan></text><line x1="500" y1="245" x2="500" y2="468" stroke="#3a3a3a" stroke-width="1.25" stroke-dasharray="1.5 6"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="500" font-size="22" fill="#111"><tspan x="500" y="498">Your Positioning</tspan></text></svg></div>
+    </section>
+
+    <!-- 7 — Brand Production (content TBD, flag Ben) -->
+    <section class="slide" data-screen-label="07">
+      <div class="kick rise"><span class="num">07</span><span class="lbl">Toolkit · Build it</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Brand platform + campaign creative process</h1>
+      <div class="diagram proc rise" style="transition-delay:.16s"><svg viewBox="0 0 1240 360" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><line x1="214" y1="180" x2="254" y2="180" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="2 6"/><polygon points="264,180 256,172 256,188" fill="#6f6f6f"/><line x1="472" y1="180" x2="512" y2="180" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="2 6"/><polygon points="522,180 514,172 514,188" fill="#6f6f6f"/><line x1="730" y1="180" x2="770" y2="180" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="2 6"/><polygon points="780,180 772,172 772,188" fill="#6f6f6f"/><line x1="988" y1="180" x2="1028" y2="180" stroke="#6f6f6f" stroke-width="1.5" stroke-dasharray="2 6"/><polygon points="1038,180 1030,172 1030,188" fill="#6f6f6f"/><circle cx="110" cy="180" r="90" fill="#d4d4d4"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="19" fill="#111"><tspan x="110" y="163.5">Creative</tspan><tspan x="110" y="186.5">Territories –</tspan><tspan x="110" y="209.5">Tissue Session</tspan></text><circle cx="368" cy="180" r="90" fill="#c2c2c2"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="19" fill="#111"><tspan x="368" y="163.5">Idea Refinement</tspan><tspan x="368" y="186.5">+ Storyboards /</tspan><tspan x="368" y="209.5">Proof of Concept</tspan></text><circle cx="626" cy="180" r="90" fill="#9a9a9a"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="19" fill="#fff"><tspan x="626" y="163.5">Idea Definition</tspan><tspan x="626" y="186.5">+ Storyboards /</tspan><tspan x="626" y="209.5">Proof of Concept</tspan></text><circle cx="884" cy="180" r="90" fill="#6f6f6f"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="19" fill="#fff"><tspan x="884" y="163.5">Finalized</tspan><tspan x="884" y="186.5">Creative</tspan><tspan x="884" y="209.5">Concept</tspan></text><circle cx="1142" cy="180" r="90" fill="#141414"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="19" fill="#fff"><tspan x="1142" y="186.5">Production</tspan></text></svg></div>
+    </section>
+
+    <!-- 8 — validation & testing -->
+    <section class="slide" data-screen-label="08">
+      <div class="kick rise"><span class="num">08</span><span class="lbl">Toolkit · Test before committing</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Insight mining &amp; validation</h1>
+      <div class="diagram diam rise" style="transition-delay:.16s"><svg viewBox="0 0 1300 500" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><polygon points="240,68 372,200 240,332 108,200" fill="#9a9a9a"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="22" fill="#fff"><tspan x="240" y="207.5">Brand Immersion</tspan></text><polygon points="492,68 624,200 492,332 360,200" fill="#9a9a9a"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="22" fill="#fff"><tspan x="492" y="207.5">Truth Mining</tspan></text><polygon points="808,68 940,200 808,332 676,200" fill="#9a9a9a"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="22" fill="#fff"><tspan x="808" y="207.5">Prototypes</tspan></text><polygon points="1060,68 1192,200 1060,332 928,200" fill="#9a9a9a"/><text text-anchor="middle" font-family="Outfit, sans-serif" font-weight="600" font-size="22" fill="#fff"><tspan x="1060" y="207.5">Creative Definition</tspan></text><line x1="650" y1="40" x2="650" y2="362" stroke="#8a8a8a" stroke-width="1.25" stroke-dasharray="1.5 6"/><line x1="110" y1="390" x2="600" y2="390" stroke="#3a3a3a" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="610,390 602,382 602,398" fill="#3a3a3a"/><line x1="700" y1="390" x2="1180" y2="390" stroke="#3a3a3a" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="1190,390 1182,382 1182,398" fill="#3a3a3a"/><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="360" y="432">Discovery</tspan></text><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="945" y="432">Definition</tspan></text></svg></div>
+    </section>
+
+    <!-- 9 — loyalty funnel -->
+    <section class="slide" data-screen-label="09">
+      <div class="kick rise"><span class="num">09</span><span class="lbl">Toolkit · Frameworks</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">The loyalty funnel</h1>
+      <div class="dsplit">
+        <div class="dtext">
+          <div class="points">
+            <div class="point rise" style="transition-delay:.16s"><strong>We work up and down the funnel</strong> — creating impact at every stage, not just the top.</div>
+            <div class="point rise" style="transition-delay:.24s">The goal: find new audiences and make them <strong>aware</strong> of the brand.</div>
+            <div class="point rise" style="transition-delay:.32s">Get them to <strong>engage</strong>, then <strong>transact</strong> — convert.</div>
+            <div class="point rise" style="transition-delay:.4s">And ultimately, become <strong>loyal</strong> — which feeds the next cycle.</div>
+          </div>
+        </div>
+        <div class="dfig rise" style="transition-delay:.2s"><svg viewBox="0 0 760 660" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><polygon points="70,40 500,40 452,214 118,214" fill="#d4d4d4"/><polygon points="118,222 452,222 404,396 166,396" fill="#9a9a9a"/><polygon points="166,404 404,404 356,560 214,560" fill="#6f6f6f"/><circle cx="285" cy="606" r="42" fill="#141414"/><line x1="504" y1="127" x2="600" y2="127" stroke="#6f6f6f" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="496,127 503,120 503,134" fill="#6f6f6f"/><text text-anchor="start" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="23" fill="#111"><tspan x="614" y="134">Awareness</tspan></text><line x1="456" y1="309" x2="600" y2="309" stroke="#6f6f6f" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="448,309 455,302 455,316" fill="#6f6f6f"/><text text-anchor="start" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="23" fill="#111"><tspan x="614" y="316">Engagement</tspan></text><line x1="408" y1="482" x2="600" y2="482" stroke="#6f6f6f" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="400,482 407,475 407,489" fill="#6f6f6f"/><text text-anchor="start" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="23" fill="#111"><tspan x="614" y="489">Conversion</tspan></text><line x1="343" y1="606" x2="600" y2="606" stroke="#6f6f6f" stroke-width="1.25" stroke-dasharray="2 6"/><polygon points="335,606 342,599 342,613" fill="#6f6f6f"/><text text-anchor="start" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="23" fill="#111"><tspan x="614" y="613">Loyalty</tspan></text></svg></div>
+      </div>
+    </section>
+
+    <!-- 10 — marketing flywheel -->
+    <section class="slide" data-screen-label="10">
+      <div class="kick rise"><span class="num">10</span><span class="lbl">Toolkit · Frameworks</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">The marketing flywheel</h1>
+      <div class="dsplit">
+        <div class="dtext">
+          <div class="points">
+            <div class="point rise" style="transition-delay:.16s"><strong>Marketing is a flywheel, not a one-off.</strong></div>
+            <div class="point rise" style="transition-delay:.24s"><strong>Build</strong> a campaign, launch it, and <strong>measure</strong> what happens.</div>
+            <div class="point rise" style="transition-delay:.32s"><strong>Learn</strong> from those measurements, <strong>refine</strong>, and apply it to the next execution.</div>
+            <div class="point rise" style="transition-delay:.4s">Every turn feeds the next — the loop builds momentum over time.</div>
+          </div>
+        </div>
+        <div class="dfig rise" style="transition-delay:.2s"><svg viewBox="-90 -10 810 660" fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><circle cx="320" cy="320" r="250" stroke="#8a8a8a" stroke-width="1.5" stroke-dasharray="2 7"/><circle cx="320" cy="320" r="150" fill="#9a9a9a"/><polygon points="360,70 349,59 349,81" fill="#141414"/><polygon points="570,360 559,349 581,349" fill="#141414"/><polygon points="280,570 291,559 291,581" fill="#141414"/><polygon points="70,280 59,291 81,291" fill="#141414"/><polygon points="496.7766952966369,496.77669529663683 488.7766952966369,488.77669529663683 488.7766952966369,504.77669529663683" fill="#d4d4d4"/><polygon points="143.22330470336314,496.7766952966369 135.22330470336314,488.7766952966369 151.22330470336314,488.7766952966369" fill="#d4d4d4"/><polygon points="143.22330470336308,143.22330470336314 151.22330470336308,135.22330470336314 151.22330470336308,151.22330470336314" fill="#d4d4d4"/><polygon points="496.77669529663683,143.22330470336308 488.77669529663683,151.22330470336308 504.77669529663683,151.22330470336308" fill="#d4d4d4"/><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="320" y="30">Build</tspan></text><text text-anchor="start" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="598" y="328">Measure</tspan></text><text text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="320" y="638">Learn</tspan></text><text text-anchor="end" font-family="EB Garamond, Georgia, serif" font-style="italic" font-weight="500" font-size="24" fill="#111"><tspan x="42" y="328">Refine</tspan></text></svg></div>
+      </div>
+    </section>
+
+    <!-- 11 — our domains of expertise (formula) -->
+    <section class="slide" data-screen-label="11">
+      <div class="kick rise"><span class="num">11</span><span class="lbl">Toolkit · Where it applies</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Our domains of expertise</h1>
+      <div class="formula rise" style="transition-delay:.16s">
+        <span class="paren">(</span>
+        <div class="dom"><div class="dname">Brand</div><div class="dparts">Meaning · Expression</div></div>
+        <span class="op">·</span>
+        <div class="dom"><div class="dname">Experience</div><div class="dparts">Digital · Physical</div></div>
+        <span class="op">·</span>
+        <div class="dom"><div class="dname">Promotion</div><div class="dparts">Comms</div></div>
+        <span class="paren">)</span>
+        <span class="expo">Performance</span>
+      </div>
+      <div class="fcap rise" style="transition-delay:.28s">Performance isn’t a fourth domain sitting beside these — it’s the exponent. Every domain gets raised to the power of <strong>Performance</strong>: measurable and optimized, not just produced.</div>
+    </section>
+
+    <!-- 12 — section turn: proof it works -->
+    <section class="slide invert" data-screen-label="12">
+      <div class="kick rise"><span class="num">12</span><span class="lbl">Proof</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.1s">Work we’ve started</h1>
+      <div class="sub rise" style="transition-delay:.2s">The thinking above isn’t theoretical — here’s where it’s already been applied.</div>
+    </section>
+
+    <!-- 13 — loyalty example -->
+    <section class="slide" data-screen-label="13">
+      <div class="kick rise"><span class="num">13</span><span class="lbl">Proof · Example</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Loyalty program</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.14s">A concrete case — proof the <strong>funnel thinking</strong> is already in motion.</div>
+      </div>
+    </section>
+
+    <!-- 14 — WJC example -->
+    <section class="slide" data-screen-label="14">
+      <div class="kick rise"><span class="num">14</span><span class="lbl">Proof · Example</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">WJC</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.14s">A second case — proof of <strong>opportunity-driven creative</strong>, not just a standing deliverable.</div>
+      </div>
+    </section>
+
+    <!-- 15 — what's next -->
+    <section class="slide" data-screen-label="15">
+      <div class="kick rise"><span class="num">15</span><span class="lbl">Proof</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">What’s next</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.14s">Where this goes from here — building on what’s already working.</div>
+      </div>
+    </section>
+
+    <!-- 16 — what's still missing -->
+    <section class="slide" data-screen-label="16">
+      <div class="kick rise"><span class="num">16</span><span class="lbl">The bridge</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">What’s still missing:<br>Who We Are, Who We’re For</h1>
+      <div class="fnote rise" style="transition-delay:.12s">And why they should care.</div>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.16s">Everything in this deck has been about <strong>how</strong> we build creative.</div>
+        <div class="point rise" style="transition-delay:.24s">But we still need the brand work itself — to answer the two questions from the definition for real: <strong>the source, and the recipient.</strong></div>
+      </div>
+    </section>
+
+    <!-- 17 — closer: today and tomorrow -->
+    <section class="slide invert closer" data-screen-label="17">
+      <div class="kick rise"><span class="num">17</span><span class="lbl">The bridge</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.1s">That’s what today (and tomorrow) is for</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.2s"><strong>Today</strong> — Discovery: the business landscape and marketing objectives that surface the opportunities, trends, and landscape informing brand position.</div>
+        <div class="point rise" style="transition-delay:.28s"><strong>Tomorrow</strong> — the brand workshop, where that turns into an actual platform.</div>
+      </div>
+      <div class="hint rise" style="transition-delay:.4s">First up: today’s Discovery sessions →</div>
+    </section>
+
+  </div>
+
+  <div class="footer" id="footer">
+    <div class="counter"><span class="cur" id="cur">01</span> / <span id="total">17</span></div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous slide">←</button>
+      <button id="next" aria-label="Next slide">→</button>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('canvas');
+  function fit(){
+    if(canvas.hasAttribute('noscale')) return;
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    canvas.style.transform = 'translate(-50%,-50%) scale('+s+')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var prog = document.getElementById('prog');
+  var brand = document.getElementById('brand');
+  var footer = document.getElementById('footer');
+  var curEl = document.getElementById('cur');
+  document.getElementById('total').textContent = String(total).padStart(2,'0');
+
+  function pad(n){return String(n+1).padStart(2,'0');}
+
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.remove('active','before','after');
+      if(i===cur) s.classList.add('active');
+      else if(i<cur) s.classList.add('before');
+      else s.classList.add('after');
+    });
+    var dark = slides[cur].classList.contains('invert');
+    brand.classList.toggle('on-dark',dark);
+    footer.classList.toggle('on-dark',dark);
+    prog.classList.toggle('on-dark',dark);
+    prog.style.width = ((cur)/(total-1)*100) + '%';
+    curEl.textContent = pad(cur);
+  }
+
+  function go(n){
+    cur = Math.max(0, Math.min(total-1, n));
+    render();
+  }
+  function next(){ if(cur<total-1) go(cur+1); }
+  function prev(){ if(cur>0) go(cur-1); }
+
+  document.getElementById('next').addEventListener('click', function(e){e.stopPropagation();next();});
+  document.getElementById('prev').addEventListener('click', function(e){e.stopPropagation();prev();});
+
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav')) return;
+    next();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key===' '||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(total-1);}
+  });
+
+  window.__deckGo = go;
+  render();
+})();
+</script>
+</body>
+</html>

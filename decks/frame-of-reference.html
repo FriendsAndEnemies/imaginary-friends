@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frame of Reference — Friends &amp; Enemies</title>
+<style>
+  /* ---- Brand fonts (Friends & Enemies design system) ---- */
+  @font-face{font-family:"Outfit";src:url("../assets/fonts/Outfit-VariableFont_wght.ttf") format("truetype-variations");font-weight:100 900;font-display:swap}
+  @font-face{font-family:"EB Garamond";src:url("../assets/fonts/EBGaramond-Italic-VariableFont_wght.ttf") format("truetype-variations");font-weight:400 800;font-style:italic;font-display:swap}
+  @font-face{font-family:"Source Code Pro";src:url("../assets/fonts/SourceCodePro-VariableFont_wght.ttf") format("truetype-variations");font-weight:200 900;font-display:swap}
+
+  :root{
+    --ink:#111111; --paper:#ffffff; --paper-warm:#faf9f7;
+    --g200:#e6e5e3; --g300:#d4d4d4; --g400:#b0b0b0; --g500:#8a8a8a; --g600:#666666; --g800:#2b2b2b;
+    --font-sans:"Outfit","Helvetica Neue",Arial,sans-serif;
+    --font-serif:"EB Garamond",Georgia,serif;
+    --font-mono:"Source Code Pro",ui-monospace,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper-warm); color:var(--ink);
+    font-family:var(--font-sans);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--ink);color:var(--paper)}
+  a{color:var(--ink);text-decoration:underline}
+  a:hover{color:var(--g600)}
+
+  /* fixed-canvas scaling: 1920x1080 canvas, uniformly scaled to fit any viewport */
+  .viewport{position:fixed;inset:0;background:#000;overflow:hidden}
+  .canvas{position:absolute;top:50%;left:50%;width:1920px;height:1080px;
+    transform-origin:center center;background:var(--paper-warm);overflow:hidden}
+  .stage{position:absolute;inset:0}
+
+  /* ---- Slide base ---- */
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:120px;
+    opacity:0;transform:translateX(48px);
+    transition:opacity .45s ease, transform .48s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .slide.before{transform:translateX(-48px)}
+  .slide.after{transform:translateX(48px)}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+  .slide.closer{transform:none !important;transition:opacity .85s ease}
+
+  /* dark bookends / section turns */
+  .slide.invert{background:var(--ink);color:var(--paper)}
+  .slide.invert .kick .lbl{color:var(--g400)}
+  .slide.invert .kick .num{color:var(--g600)}
+  .slide.invert .sub{color:var(--g400)}
+  .slide.invert .rule{background:rgba(255,255,255,.16)}
+  .slide.invert .point{border-color:rgba(255,255,255,.14)}
+  .slide.invert .col{border-color:rgba(255,255,255,.18)}
+  .slide.invert .cols{border-color:rgba(255,255,255,.5)}
+  .slide.invert .col .cnum{color:var(--g500)}
+  .slide.invert .col .cbody{color:var(--g400)}
+  .slide.invert .stmt em{color:var(--paper)}
+
+  /* ---- Kicker ---- */
+  .kick{display:flex;align-items:center;gap:14px;
+    font-family:var(--font-mono);font-size:13px;font-weight:500;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:40px}
+  .kick .num{color:var(--g500)}
+  .kick .lbl{color:var(--g600)}
+  .kick .rule{flex:1;height:1px;background:var(--g300);max-width:280px}
+
+  /* ---- Headline ---- */
+  h1.head{
+    font-family:var(--font-sans);font-weight:600;
+    font-size:66px;line-height:1.04;letter-spacing:-.02em;
+    margin:0;max-width:20ch;text-wrap:balance;
+  }
+  h1.head.sm{font-size:52px}
+  h1.head.xs{font-size:44px;max-width:26ch}
+  .sub{font-family:var(--font-sans);font-weight:300;color:var(--g600);
+    font-size:22px;margin-top:16px;letter-spacing:-.01em;max-width:60ch;line-height:1.4}
+
+  /* statement (POV) — large light paragraph */
+  .stmt{font-family:var(--font-sans);font-weight:600;
+    font-size:46px;line-height:1.18;letter-spacing:-.02em;margin:0;max-width:22ch}
+  .stmt.tight{max-width:20ch}
+  .stmt em{font-family:var(--font-serif);font-style:italic;font-weight:500}
+  .stmt strong{font-weight:600}
+
+  /* ---- Supporting points ---- */
+  .points{margin-top:44px;max-width:64ch;display:flex;flex-direction:column}
+  .point{
+    font-family:var(--font-sans);font-weight:300;
+    font-size:23px;line-height:1.42;letter-spacing:-.01em;
+    padding:16px 0;border-top:1px solid var(--g200);
+  }
+  .point:first-child{border-top:0}
+  .point strong{font-weight:600}
+  .fnote{font-family:var(--font-sans);font-weight:300;font-size:16px;
+    line-height:1.4;color:var(--g500);margin-top:34px;max-width:88ch}
+  .fnote strong{font-weight:500;color:var(--g600)}
+
+  /* ---- Columns (2/3/4/5-up) ---- */
+  .cols{display:flex;gap:0;margin-top:44px;max-width:1680px;border-top:1.5px solid var(--ink)}
+  .col{flex:1;padding:22px 26px 14px;border-right:1px solid var(--g300)}
+  .col:last-child{border-right:0}
+  .col .cnum{font-family:var(--font-mono);font-size:12px;color:var(--g500);letter-spacing:.1em;text-transform:uppercase}
+  .col .cname{font-family:var(--font-sans);font-weight:600;font-size:26px;letter-spacing:-.01em;margin-top:12px;line-height:1.1}
+  .col .cbody{font-family:var(--font-sans);font-weight:300;font-size:17px;
+    line-height:1.4;color:var(--g600);margin-top:12px}
+
+  /* ---- Cover ---- */
+  .cover-meta{font-family:var(--font-mono);font-size:15px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--g400)}
+  .cover-title{font-family:var(--font-sans);font-weight:600;font-size:132px;
+    line-height:.98;letter-spacing:-.03em;margin:30px 0 0}
+  .cover-sub{font-family:var(--font-serif);font-style:italic;font-weight:500;
+    font-size:40px;color:var(--g300);margin-top:30px}
+  .cover-foot{position:absolute;left:120px;bottom:120px;right:120px;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--g500)}
+
+  /* ---- Bigline (turns) ---- */
+  .bigline{font-family:var(--font-sans);font-weight:600;
+    font-size:62px;line-height:1.06;letter-spacing:-.02em;margin:0;max-width:20ch}
+  .bigline em{font-family:var(--font-serif);font-style:italic;font-weight:500}
+  .turnlead{font-family:var(--font-mono);font-size:14px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--g500);margin-bottom:28px}
+
+  /* ---- Agenda schedule ---- */
+  .sched{display:grid;grid-template-columns:1fr 1fr;gap:0 90px;margin-top:44px;max-width:1360px}
+  .srow{display:grid;grid-template-columns:120px 1fr;align-items:baseline;gap:20px;
+    padding:17px 0;border-top:1px solid var(--g200)}
+  .srow .st{font-family:var(--font-mono);font-size:16px;color:var(--g500);letter-spacing:.04em}
+  .srow .sn{font-family:var(--font-sans);font-weight:500;font-size:24px;letter-spacing:-.01em}
+  .srow.br .sn{color:var(--g400);font-weight:300;font-style:italic;font-family:var(--font-serif);font-size:26px}
+  .srow.hi .sn{font-weight:600}
+
+  /* ---- People (friends overview) ---- */
+  .people{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:52px;
+    max-width:1680px;border-top:1.5px solid var(--ink)}
+  .person{padding:26px 30px 10px;border-right:1px solid var(--g300)}
+  .person:last-child{border-right:0}
+  .person .pn{font-family:var(--font-sans);font-weight:600;font-size:30px;letter-spacing:-.01em}
+  .person .pr{font-family:var(--font-sans);font-weight:300;font-size:19px;color:var(--g600);margin-top:12px;line-height:1.34}
+  .person .po{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--g500);margin-top:14px}
+
+  /* ---- Duo (exec summary) ---- */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:52px;max-width:1680px;border-top:1.5px solid var(--ink)}
+  .duo .half{padding:40px 46px 24px;border-right:1px solid var(--g300)}
+  .duo .half:last-child{border-right:0}
+  .duo .hlbl{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--g500)}
+  .duo .hbig{font-family:var(--font-sans);font-weight:600;font-size:48px;letter-spacing:-.02em;margin-top:26px;line-height:1.04}
+  .duo .hbody{font-family:var(--font-sans);font-weight:300;font-size:20px;color:var(--g600);margin-top:16px;line-height:1.42;max-width:34ch}
+
+  /* ---- Split (text + graphic) ---- */
+  .split{display:grid;grid-template-columns:1.05fr 0.95fr;gap:80px;align-items:center;margin-top:20px}
+  .split.rev{grid-template-columns:0.95fr 1.05fr}
+
+  /* ---- Funnel ---- */
+  .funnel{display:flex;flex-direction:column;gap:10px;width:100%}
+  .fstage{border:1.5px solid var(--ink);padding:20px 26px;display:flex;align-items:baseline;gap:18px}
+  .fstage .fsn{font-family:var(--font-mono);font-size:13px;color:var(--g500);letter-spacing:.1em}
+  .fstage .fsname{font-family:var(--font-sans);font-weight:600;font-size:28px;letter-spacing:-.01em}
+  .fstage:nth-child(1){width:100%}
+  .fstage:nth-child(2){width:88%}
+  .fstage:nth-child(3){width:76%}
+  .fstage:nth-child(4){width:64%;background:var(--ink);color:var(--paper)}
+  .fstage:nth-child(4) .fsn{color:var(--g500)}
+
+  /* ---- Roster (team overview) ---- */
+  .roster{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:40px;max-width:1680px;border-top:1.5px solid var(--ink)}
+  .rgroup{padding:28px 40px 14px;border-right:1px solid var(--g300)}
+  .rgroup:last-child{border-right:0}
+  .rgroup .rglbl{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--g500);margin-bottom:22px}
+  .rgroup .rgname{font-family:var(--font-sans);font-weight:600;font-size:26px;letter-spacing:-.01em;margin-bottom:18px}
+  .rlist{display:grid;grid-template-columns:1fr 1fr;gap:14px 34px}
+  .rp .rpn{font-family:var(--font-sans);font-weight:600;font-size:19px;letter-spacing:-.01em}
+  .rp .rpr{font-family:var(--font-sans);font-weight:300;font-size:15px;color:var(--g600);margin-top:3px;line-height:1.28}
+
+  /* ---- Capabilities (centres of excellence) ---- */
+  .coe{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:40px;max-width:1680px;border-top:1.5px solid var(--ink)}
+  .cgroup{padding:28px 40px 20px;border-right:1px solid var(--g300)}
+  .cgroup:last-child{border-right:0}
+  .cgroup .cglbl{font-family:var(--font-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--g500)}
+  .cgroup .cgname{font-family:var(--font-sans);font-weight:600;font-size:30px;letter-spacing:-.01em;margin-top:14px}
+  .cgroup .cgsub{font-family:var(--font-sans);font-weight:300;font-size:17px;color:var(--g600);margin-top:8px}
+  .caps{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .cap{font-family:var(--font-mono);font-size:13px;letter-spacing:.02em;
+    padding:7px 12px;border:1px solid var(--g300);color:var(--g600)}
+
+  /* ---- Workstream detail (4-col with lists) ---- */
+  .wsphase{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:36px;max-width:1680px;border-top:1.5px solid var(--ink)}
+  .wsp{padding:22px 22px 14px;border-right:1px solid var(--g300)}
+  .wsp:last-child{border-right:0}
+  .wsp .wph{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--g500)}
+  .wsp .wpt{font-family:var(--font-sans);font-weight:600;font-size:22px;letter-spacing:-.01em;margin-top:12px;line-height:1.1}
+  .wsp .wpi{font-family:var(--font-sans);font-weight:300;font-size:15px;color:var(--g600);margin-top:10px;line-height:1.38}
+  .wsp ul{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .wsp li{font-family:var(--font-sans);font-weight:300;font-size:15.5px;color:var(--g800);
+    line-height:1.3;padding-left:16px;position:relative}
+  .wsp li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:1.5px;background:var(--g400)}
+  .wsp li strong{font-weight:600}
+
+  /* phase band (methodology overview) */
+  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:52px;max-width:1680px}
+  .phase{border:1.5px solid var(--ink);padding:30px 30px 40px;position:relative;min-height:320px;display:flex;flex-direction:column}
+  .phase .phn{font-family:var(--font-mono);font-size:13px;color:var(--g500);letter-spacing:.1em}
+  .phase .pht{font-family:var(--font-sans);font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:20px;line-height:1.05}
+  .phase .phb{font-family:var(--font-sans);font-weight:300;font-size:18px;color:var(--g600);margin-top:14px;line-height:1.4}
+  .phase .phx{margin-top:auto;font-family:var(--font-mono);font-size:34px;color:var(--g300);font-weight:300}
+
+  /* ---- Diagram wrapper ---- */
+  .diagram{display:flex;align-items:center;justify-content:center;width:100%}
+  .diagram svg{width:100%;height:auto;overflow:visible}
+  .diagram svg text{font-family:var(--font-mono);letter-spacing:.06em;text-transform:uppercase;fill:var(--g600)}
+  .diagram svg .dname{font-family:var(--font-sans);font-weight:600;letter-spacing:-.01em;text-transform:none;fill:var(--ink)}
+  .diagram svg .dctr{font-family:var(--font-sans);font-weight:600;letter-spacing:-.01em;text-transform:none;fill:var(--ink)}
+
+  /* ---- Stat ---- */
+  .stat{display:flex;align-items:baseline;gap:22px;margin-top:8px}
+  .stat .snum{font-family:var(--font-sans);font-weight:600;font-size:132px;letter-spacing:-.03em;line-height:.9}
+  .stat .slbl{font-family:var(--font-sans);font-weight:300;font-size:22px;color:var(--g600);max-width:20ch;line-height:1.36}
+
+  /* ---- Gantt (roadmap) ---- */
+  .gantt{margin-top:44px;max-width:1680px}
+  .ghead{display:grid;grid-template-columns:230px repeat(5,1fr);border-bottom:1.5px solid var(--ink);padding-bottom:12px}
+  .ghead .gh{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);text-align:center}
+  .ghead .gh:first-child{text-align:left}
+  .grow2{display:grid;grid-template-columns:230px 1fr;align-items:center;padding:12px 0;border-bottom:1px solid var(--g200)}
+  .grow2 .glbl{font-family:var(--font-sans);font-weight:500;font-size:19px;letter-spacing:-.01em}
+  .gtrack{position:relative;height:26px}
+  .gbar{position:absolute;top:3px;height:20px;background:var(--ink);border:1px solid var(--ink)}
+  .gbar.ghol{background:transparent}
+  .gbar .gbt{position:absolute;left:12px;top:50%;transform:translateY(-50%);white-space:nowrap;
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--paper)}
+  .gbar.ghol .gbt{color:var(--g600)}
+
+  /* ---- rise-in ---- */
+  .rise{opacity:0;transform:translateY(16px);
+    transition:opacity .55s ease, transform .6s cubic-bezier(.16,1,.3,1)}
+  .slide.active .rise{opacity:1;transform:none}
+
+  /* ---- Fixed chrome ---- */
+  .brand{position:absolute;top:52px;left:52px;z-index:20;
+    width:48px;color:var(--ink);pointer-events:none;transition:color .45s ease}
+  .brand.on-dark{color:var(--paper)}
+  .brand svg{width:100%;display:block}
+  .footer{position:absolute;bottom:44px;left:52px;
+    right:52px;display:flex;justify-content:space-between;align-items:center;
+    z-index:20;font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--g500);pointer-events:none;transition:color .45s ease}
+  .footer.on-dark{color:var(--g500)}
+  .counter .cur{color:var(--ink);transition:color .45s ease}
+  .footer.on-dark .counter .cur{color:var(--paper)}
+  .nav{display:flex;gap:8px;pointer-events:auto}
+  .nav button{width:34px;height:34px;border:1px solid var(--g400);background:transparent;
+    color:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:15px;border-radius:0;transition:background .15s,border-color .15s,color .15s}
+  .nav button:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .footer.on-dark .nav button:hover{background:var(--paper);border-color:var(--paper);color:var(--ink)}
+  .prog{position:absolute;top:0;left:0;height:2px;background:var(--ink);z-index:30;
+    transition:width .45s cubic-bezier(.16,1,.3,1), background .45s ease}
+  .prog.on-dark{background:var(--paper)}
+
+  /* export flatten */
+  .canvas[noscale]{transform:none !important;top:0 !important;left:0 !important;width:1920px !important;height:1080px !important}
+  .canvas[noscale] .slide{opacity:1 !important;transform:none !important;transition:none !important}
+  .canvas[noscale] .rise{opacity:1 !important;transform:none !important;transition:none !important}
+
+  @media (prefers-reduced-motion: reduce){
+    .slide,.rise,.prog{transition:opacity .2s ease}
+    .rise{transform:none}
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+  <div class="canvas" id="canvas">
+  <div class="prog" id="prog"></div>
+
+  <div class="brand" id="brand" aria-label="Friends and Enemies">
+    <svg viewBox="0 0 424.7 118.21" fill="currentColor" aria-hidden="true">
+      <rect x="101.94" y="100.35" width="214.14" height="17.86"></rect>
+      <polygon points="0 118.21 0 0 76.12 0 76.12 19.34 21.13 19.34 21.13 50.27 70.73 50.27 70.73 68.13 21.13 68.13 21.13 118.21 0 118.21"></polygon>
+      <polygon points="349.07 118.21 349.07 0 424.7 0 424.7 19.34 370.21 19.34 370.21 50.27 418.66 50.27 418.66 68.14 370.21 68.14 370.21 98.71 424.7 98.71 424.7 118.21 349.07 118.21"></polygon>
+    </svg>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- 1 — Cover -->
+    <section class="slide invert closer" data-screen-label="01">
+      <div class="cover-meta rise">Friends w/ Centex Petroleum</div>
+      <h1 class="cover-title rise" style="transition-delay:.1s">Frame of<br>Reference</h1>
+      <div class="cover-sub rise" style="transition-delay:.2s">In-person working session</div>
+      <div class="cover-foot">
+        <span class="rise" style="transition-delay:.3s">friendsandenemies.co</span>
+        <span class="rise" style="transition-delay:.3s">V1 · 06.08.26</span>
+      </div>
+    </section>
+
+    <!-- 2 — Wednesday Agenda -->
+    <section class="slide" data-screen-label="02">
+      <div class="kick rise"><span class="num">02</span><span class="lbl">The day</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Wednesday agenda</h1>
+      <div class="sched">
+        <div class="srow hi rise" style="transition-delay:.14s"><span class="st">9:00</span><span class="sn">Frame of Reference</span></div>
+        <div class="srow rise" style="transition-delay:.34s"><span class="st">12:45</span><span class="sn">Business Landscape &amp; Objectives</span></div>
+        <div class="srow rise" style="transition-delay:.18s"><span class="st">9:30</span><span class="sn">Onboarding</span></div>
+        <div class="srow rise" style="transition-delay:.38s"><span class="st">1:45</span><span class="sn">Marketing Objectives</span></div>
+        <div class="srow rise" style="transition-delay:.22s"><span class="st">10:15</span><span class="sn">Morning break</span></div>
+        <div class="srow rise" style="transition-delay:.42s"><span class="st">2:45</span><span class="sn">Afternoon break</span></div>
+        <div class="srow rise" style="transition-delay:.26s"><span class="st">10:30</span><span class="sn">Media 101</span></div>
+        <div class="srow rise" style="transition-delay:.46s"><span class="st">3:00</span><span class="sn">Analytics work-back</span></div>
+        <div class="srow rise" style="transition-delay:.3s"><span class="st">11:15</span><span class="sn">Creative 101</span></div>
+        <div class="srow hi rise" style="transition-delay:.5s"><span class="st">4:00</span><span class="sn">Wrap!</span></div>
+        <div class="srow br rise" style="transition-delay:.34s"><span class="st">12:00</span><span class="sn">Lunch</span></div>
+        <div class="srow rise" style="transition-delay:.54s" aria-hidden="true"><span class="st"></span><span class="sn"></span></div>
+      </div>
+    </section>
+
+    <!-- 3 — The Friends -->
+    <section class="slide" data-screen-label="03">
+      <div class="kick rise"><span class="num">03</span><span class="lbl">The Friends · Overview</span><span class="rule"></span></div>
+      <h1 class="head rise" style="transition-delay:.06s">Make new friends.</h1>
+      <div class="people">
+        <div class="person rise" style="transition-delay:.16s">
+          <div class="pn">Ben McEvoy</div>
+          <div class="pr">Managing Partner / Executive Producer</div>
+          <div class="po">Friends &amp; Enemies</div>
+        </div>
+        <div class="person rise" style="transition-delay:.24s">
+          <div class="pn">Catherine Baird</div>
+          <div class="pr">Partner / Executive Creative Director</div>
+          <div class="po">Friends &amp; Enemies</div>
+        </div>
+        <div class="person rise" style="transition-delay:.32s">
+          <div class="pn">Sheri Rogers</div>
+          <div class="pr">President</div>
+          <div class="po">Prospect Media</div>
+        </div>
+        <div class="person rise" style="transition-delay:.4s">
+          <div class="pn">Karrie Werny</div>
+          <div class="pr">Vice-President, Media</div>
+          <div class="po">Prospect Media</div>
+        </div>
+        <div class="person rise" style="transition-delay:.48s">
+          <div class="pn">Kristi Cater</div>
+          <div class="pr">Media Account Director</div>
+          <div class="po">Prospect Media Group</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 — Executive Summary -->
+    <section class="slide" data-screen-label="04">
+      <div class="kick rise"><span class="num">04</span><span class="lbl">Introduction · Executive Summary</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Two mandates, one system.</h1>
+      <div class="duo">
+        <div class="half rise" style="transition-delay:.16s">
+          <div class="hlbl">Strategy + Creative</div>
+          <div class="hbig">Optimize Brand</div>
+          <div class="hbody">Position Centex with a unified narrative and a modular brand platform built to scale across dealers.</div>
+        </div>
+        <div class="half rise" style="transition-delay:.26s">
+          <div class="hlbl">Precision Analytics + Media Optimization</div>
+          <div class="hbig">Optimize Performance</div>
+          <div class="hbody">Connect loyalty, retail and media data to target high-opportunity customers and prove what works.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 — Team Overview -->
+    <section class="slide" data-screen-label="06">
+      <div class="kick rise"><span class="num">06</span><span class="lbl">Making It Happen · Team ‘Centex’</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">The people on the work.</h1>
+      <div class="roster">
+        <div class="rgroup rise" style="transition-delay:.16s">
+          <div class="rglbl">Prospect Media — Media &amp; Analytics</div>
+          <div class="rlist">
+            <div class="rp"><div class="rpn">Sheri Rogers</div><div class="rpr">President · Executive Leadership</div></div>
+            <div class="rp"><div class="rpn">Karrie Werny</div><div class="rpr">VP Media Director · Client Lead</div></div>
+            <div class="rp"><div class="rpn">Gerald Albanese</div><div class="rpr">AVP Data &amp; Analytics</div></div>
+            <div class="rp"><div class="rpn">Joel Sillery</div><div class="rpr">360 Planning</div></div>
+            <div class="rp"><div class="rpn">Kristi Cater</div><div class="rpr">Account Director · Day-to-day PM</div></div>
+            <div class="rp"><div class="rpn">Remya Parvathy</div><div class="rpr">Senior Digital Campaign Manager</div></div>
+            <div class="rp"><div class="rpn">Cindy Garcia</div><div class="rpr">Mgr, Retail &amp; Performance Insights</div></div>
+            <div class="rp"><div class="rpn">Bhoomika Ghalyan</div><div class="rpr">Digital Planning &amp; Activation</div></div>
+            <div class="rp"><div class="rpn">Steven Elvikis</div><div class="rpr">Manager, GIS Retail Insights</div></div>
+            <div class="rp"><div class="rpn">Sai Nallapareddy</div><div class="rpr">Senior GIS Analyst</div></div>
+          </div>
+        </div>
+        <div class="rgroup rise" style="transition-delay:.26s">
+          <div class="rglbl">Friends &amp; Enemies — Brand &amp; Creative</div>
+          <div class="rlist">
+            <div class="rp"><div class="rpn">Ben McEvoy</div><div class="rpr">Executive Producer · Client Lead</div></div>
+            <div class="rp"><div class="rpn">Catherine Baird</div><div class="rpr">Executive Creative Director</div></div>
+            <div class="rp"><div class="rpn">Rich Cooper</div><div class="rpr">Creative Director, Copy</div></div>
+            <div class="rp"><div class="rpn">Christian Steffan</div><div class="rpr">Creative Director, Art</div></div>
+            <div class="rp"><div class="rpn">Zeb Barrett</div><div class="rpr">Strategy Lead</div></div>
+            <div class="rp"><div class="rpn">Cheryl Purves-Reid</div><div class="rpr">PM / Account Supervisor · Day-to-day PM</div></div>
+            <div class="rp"><div class="rpn">Ann To</div><div class="rpr">Production Design</div></div>
+            <div class="rp"><div class="rpn">TBD</div><div class="rpr">Production Vendors (Video / Photo)</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 — Centres of Excellence -->
+    <section class="slide" data-screen-label="07">
+      <div class="kick rise"><span class="num">07</span><span class="lbl">How We Work · Centres of Excellence</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">One circle of trust. Two centres of excellence.</h1>
+      <div class="sub rise" style="transition-delay:.12s">Each partner brings a full pod — creatives, strategists and production — around a shared audience and a single plan.</div>
+      <div class="coe">
+        <div class="cgroup rise" style="transition-delay:.18s">
+          <div class="cglbl">Prospect Media</div>
+          <div class="cgname">Media &amp; Analytics</div>
+          <div class="caps">
+            <span class="cap">Audience Strategy</span><span class="cap">Customer Segmentation</span>
+            <span class="cap">Competitive Landscape</span><span class="cap">Media Mix Modelling</span>
+            <span class="cap">Geospatial Insights</span><span class="cap">Retail Performance Insights</span>
+            <span class="cap">Dashboard &amp; Reporting</span><span class="cap">Ad Operations</span>
+            <span class="cap">OOH</span><span class="cap">Audio</span><span class="cap">Direct IO</span>
+            <span class="cap">OLV / Display</span><span class="cap">Programmatic / Biddable</span>
+            <span class="cap">Print / DM / Flyers</span><span class="cap">Video / CTV &amp; OTT</span>
+          </div>
+        </div>
+        <div class="cgroup rise" style="transition-delay:.28s">
+          <div class="cglbl">Friends &amp; Enemies</div>
+          <div class="cgname">Brand &amp; Creative</div>
+          <div class="caps">
+            <span class="cap">Brand Architecture + Positioning</span><span class="cap">Persona Development</span>
+            <span class="cap">Messaging Frameworks</span><span class="cap">Campaign Platform Development</span>
+            <span class="cap">Full-funnel Orchestration</span><span class="cap">Visual Identity Systems</span>
+            <span class="cap">Design Language</span><span class="cap">Modular Brand Toolkits</span>
+            <span class="cap">Art Direction Systems</span><span class="cap">Motion Identity</span>
+            <span class="cap">Scalable Asset Libraries</span><span class="cap">Digital Design (UX/UI)</span>
+            <span class="cap">Digital Development</span><span class="cap">Video &amp; Motion Production</span>
+            <span class="cap">Photography Systems</span><span class="cap">Social Content Pipelines</span>
+            <span class="cap">Long / Short-form Copy</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 — POV turn -->
+    <section class="slide invert closer" data-screen-label="08">
+      <div class="turnlead rise">Point of View</div>
+      <div class="bigline rise" style="transition-delay:.1s">Key insights — from <em>independence</em> to <em>influence</em>.</div>
+    </section>
+
+    <!-- 9 — The Enemies / What We Know -->
+    <section class="slide" data-screen-label="09">
+      <div class="kick rise"><span class="num">09</span><span class="lbl">The Enemies · What We Know</span><span class="rule"></span></div>
+      <h1 class="head sm rise" style="transition-delay:.06s">Resilient by nature — but the marketing hasn’t kept pace.</h1>
+      <div class="points">
+        <div class="point rise" style="transition-delay:.16s">As the largest independent fuel retailer in Canada, Centex has built resilience through <strong>independence, smart procurement, and community-rooted growth</strong>.</div>
+        <div class="point rise" style="transition-delay:.24s">Yet its marketing systems — <strong>brand positioning, measurement, loyalty integration, and media orchestration</strong> — have not evolved at the same pace.</div>
+      </div>
+    </section>
+
+    <!-- 10 — The Enemies intro -->
+    <section class="slide invert closer" data-screen-label="10">
+      <div class="turnlead rise">The Enemies</div>
+      <div class="bigline rise" style="transition-delay:.1s">Between this moment and momentum are a set of forces that quietly decide what gains traction — and what doesn’t.</div>
+    </section>
+
+    <!-- 11 — The Enemies detail -->
+    <section class="slide" data-screen-label="11">
+      <div class="kick rise"><span class="num">11</span><span class="lbl">The Enemies · The Four Forces</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Four enemies of momentum.</h1>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.16s">
+          <div class="cnum">01</div><div class="cname">Invisibility</div>
+          <div class="cbody">In fuel retail, decisions are made in seconds. Without strong awareness, Centex is just another sign on the road. Not remembered means not chosen.</div>
+        </div>
+        <div class="col rise" style="transition-delay:.24s">
+          <div class="cnum">02</div><div class="cname">Tactical Churn</div>
+          <div class="cbody">Constant creative and media resets create short-term spikes but no lasting brand memory. Without a consistent system, marketing is episodic, not cumulative.</div>
+        </div>
+        <div class="col rise" style="transition-delay:.32s">
+          <div class="cnum">03</div><div class="cname">Data Fragmentation</div>
+          <div class="cbody">Loyalty, digital and retail data aren’t fully connected — limiting 1:1 communication, personalization, media optimization and measurement. Partial data, partial decisions.</div>
+        </div>
+        <div class="col rise" style="transition-delay:.4s">
+          <div class="cnum">04</div><div class="cname">Channel Silos</div>
+          <div class="cbody">Awareness doesn’t feed consideration; consideration doesn’t convert to loyalty; loyalty doesn’t inform media. Without orchestration, activity can’t scale.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 — The Tension -->
+    <section class="slide" data-screen-label="12">
+      <div class="kick rise"><span class="num">12</span><span class="lbl">The Enemies · The Tension</span><span class="rule"></span></div>
+      <div class="stmt rise" style="transition-delay:.1s">Centex has the scale, the independence and the operational strength to compete. What’s missing is a <em>unified brand narrative</em> and marketing system.</div>
+    </section>
+
+    <!-- 13 — The Opportunity -->
+    <section class="slide invert closer" data-screen-label="13">
+      <div class="turnlead rise">The Opportunity</div>
+      <div class="bigline rise" style="transition-delay:.1s">When brand, loyalty, media and execution work together, growth <em>compounds</em>. That’s where the opportunity lies.</div>
+    </section>
+
+    <!-- 14 — The Insights Overview -->
+    <section class="slide" data-screen-label="14">
+      <div class="kick rise"><span class="num">14</span><span class="lbl">The Insights · Overview</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Five ways loyalty becomes growth.</h1>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.16s"><div class="cnum">01</div><div class="cname">Functional Loyalty</div><div class="cbody">Loyalty as the connective tissue.</div></div>
+        <div class="col rise" style="transition-delay:.22s"><div class="cnum">02</div><div class="cname">Emotional Loyalty</div><div class="cbody">Winning the “blue ocean” through narrative.</div></div>
+        <div class="col rise" style="transition-delay:.28s"><div class="cnum">03</div><div class="cname">Behavioural Loyalty</div><div class="cbody">From discounting to habit-building.</div></div>
+        <div class="col rise" style="transition-delay:.34s"><div class="cnum">04</div><div class="cname">Targeted Loyalty</div><div class="cbody">Why we can’t out-spend the giants.</div></div>
+        <div class="col rise" style="transition-delay:.4s"><div class="cnum">05</div><div class="cname">Scaling Loyalty</div><div class="cbody">From campaigns to the growth flywheel.</div></div>
+      </div>
+    </section>
+
+    <!-- Insight 01 · Functional Loyalty (Part A) -->
+    <section class="slide" data-screen-label="15">
+      <div class="kick rise"><span class="num">15</span><span class="lbl">Insight 01 · Functional Loyalty</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <div class="stmt rise" style="transition-delay:.1s">Your loyalty program is not just a rewards tool. It is a <em>live signal</em> of who chooses Centex — and why.</div>
+          <div class="sub rise" style="transition-delay:.2s">Within it is the clearest definition of your High Opportunity Customer.</div>
+        </div>
+        <div class="diagram" style="display:block">
+          <div class="funnel">
+            <div class="fstage rise" style="transition-delay:.24s"><span class="fsn">01</span><span class="fsname">Awareness</span></div>
+            <div class="fstage rise" style="transition-delay:.32s"><span class="fsn">02</span><span class="fsname">Engagement</span></div>
+            <div class="fstage rise" style="transition-delay:.4s"><span class="fsn">03</span><span class="fsname">Conversion</span></div>
+            <div class="fstage rise" style="transition-delay:.48s"><span class="fsn">04</span><span class="fsname">Loyalty</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 — Insight 1: Universe Mapping -->
+    <section class="slide" data-screen-label="15">
+      <div class="kick rise"><span class="num">15</span><span class="lbl">Insight 01 · Build a Platform, not a Moment</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <h1 class="head xs rise" style="transition-delay:.06s">Map the universe before you spend.</h1>
+          <div class="sub rise" style="transition-delay:.12s">Understand who your customer base is, what they spend on fuel, what share you’re winning — and what share you’re losing.</div>
+          <div class="points" style="margin-top:30px">
+            <div class="point rise" style="transition-delay:.2s"><strong>Map the opportunity.</strong> Share of Visitation, cross-visitation and pump patterns.</div>
+            <div class="point rise" style="transition-delay:.28s"><strong>Grow it.</strong> Improve share-of-wallet with loyalists, steal share from switchers, acquire and blunt the competition.</div>
+          </div>
+        </div>
+        <div class="diagram" style="display:block">
+          <div class="cols" style="margin-top:0;flex-direction:column;border-top:1.5px solid var(--ink)">
+            <div class="col rise" style="transition-delay:.24s;border-right:0;border-bottom:1px solid var(--g300)"><div class="cnum">Current Base</div><div class="cname" style="font-size:22px">Total sales · Avg frequency · Avg basket</div></div>
+            <div class="col rise" style="transition-delay:.32s;border-right:0;border-bottom:1px solid var(--g300)"><div class="cnum">Growth Opportunity</div><div class="cname" style="font-size:22px">Loyalists → SOW · Switchers → steal share</div></div>
+            <div class="col rise" style="transition-delay:.4s;border-right:0"><div class="cnum">Acquire</div><div class="cname" style="font-size:22px">New registrants · Competitive blunting</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="fnote rise" style="transition-delay:.5s"><strong>Source:</strong> Prospect Media’s proprietary SHOPOGRAPHY platform — visitation data, Calgary location 2105 52nd St SE.</div>
+    </section>
+
+    <!-- 16 — Insight 2: Emotional Loyalty -->
+    <section class="slide" data-screen-label="16">
+      <div class="kick rise"><span class="num">16</span><span class="lbl">Insight 02 · Emotional Loyalty</span><span class="rule"></span></div>
+      <div class="stmt tight rise" style="transition-delay:.1s">Trust is the real differentiator.</div>
+      <div class="points" style="margin-top:36px">
+        <div class="point rise" style="transition-delay:.18s">Search behaviour tells the story. When people ask <strong>“Is Centex gas good?”</strong> they’re not debating price — they’re questioning quality.</div>
+        <div class="point rise" style="transition-delay:.26s">Low price without explanation creates doubt. Independence without narrative creates ambiguity.</div>
+        <div class="point rise" style="transition-delay:.34s"><strong>Trust is built when your story explains your advantage.</strong></div>
+      </div>
+    </section>
+
+    <!-- 17 — Insight 3: Behavioural Loyalty -->
+    <section class="slide" data-screen-label="17">
+      <div class="kick rise"><span class="num">17</span><span class="lbl">Insight 03 · Behavioural Loyalty</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Win the routine, not the fill-up.</h1>
+      <div class="sub rise" style="transition-delay:.12s">High-frequency categories reward consistency, not campaigns. Habit is built when message, media and moment align around your High Opportunity Customers.</div>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.18s"><div class="cnum">Step 01</div><div class="cname">Mine for insights</div><div class="cbody">Layer Centex sales and CRM metrics, trade-area analysis and competitive blunting opportunities.</div></div>
+        <div class="col rise" style="transition-delay:.26s"><div class="cnum">Step 02</div><div class="cname">Size the opportunity</div><div class="cbody">Brands ideate around 1–3 personas — but most really have 15–30 customer segments.</div></div>
+        <div class="col rise" style="transition-delay:.34s"><div class="cnum">Step 03</div><div class="cname">Refine to HOCs</div><div class="cbody">Direct strategy and investment toward the personas that actually move business objectives.</div></div>
+      </div>
+    </section>
+
+    <!-- 18 — Insight 4: Why we can't out-spend -->
+    <section class="slide" data-screen-label="18">
+      <div class="kick rise"><span class="num">18</span><span class="lbl">Insight 04 · Why We Can’t Out-spend the Giants</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <div class="stmt rise" style="transition-delay:.1s">Can’t out-execute tactically? <em>Out-integrate</em> strategically.</div>
+          <div class="sub rise" style="transition-delay:.2s">The biggest players win by spending more, owning massive loyalty ecosystems and staying permanently visible. A few dominate share — and media.</div>
+        </div>
+        <div class="txt">
+          <div class="stat rise" style="transition-delay:.28s">
+            <div class="snum">$15M+</div>
+            <div class="slbl">spent annually in media by the category’s dominant players, combined.</div>
+          </div>
+        </div>
+      </div>
+      <div class="fnote rise" style="transition-delay:.44s"><strong>Source:</strong> IBISWorld — Canadian Gas Stations with Convenience Stores, May 2025. Media Radar &amp; Vivvix traditional and digital media spend, 2022–2025 estimates.</div>
+    </section>
+
+    <!-- 19 — Insight 5: Scaling Loyalty (flywheel) -->
+    <section class="slide" data-screen-label="19">
+      <div class="kick rise"><span class="num">19</span><span class="lbl">Insight 05 · Scaling Loyalty</span><span class="rule"></span></div>
+      <div class="split">
+        <div class="txt">
+          <h1 class="head xs rise" style="transition-delay:.06s">From spurts to systems.</h1>
+          <div class="points" style="margin-top:30px">
+            <div class="point rise" style="transition-delay:.18s">Growth doesn’t happen in a single campaign — it compounds through intentional cycles of action and adaptation.</div>
+            <div class="point rise" style="transition-delay:.26s">One-off bursts create spikes. <strong>Connected systems create momentum.</strong></div>
+            <div class="point rise" style="transition-delay:.34s">When brand, media, loyalty and data operate as one loop, performance improves over time.</div>
+          </div>
+        </div>
+        <div class="diagram">
+          <svg viewBox="0 0 460 460" class="rise" style="transition-delay:.2s" aria-hidden="true">
+            <circle cx="230" cy="230" r="150" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"></circle>
+            <path d="M230 80 A150 150 0 0 1 380 230" fill="none" stroke="var(--ink)" stroke-width="2"></path>
+            <polygon points="380,230 372,216 388,216" fill="var(--ink)"></polygon>
+            <circle cx="230" cy="80" r="6" fill="var(--ink)"></circle>
+            <circle cx="380" cy="230" r="6" fill="var(--ink)"></circle>
+            <circle cx="230" cy="380" r="6" fill="var(--ink)"></circle>
+            <circle cx="80" cy="230" r="6" fill="var(--ink)"></circle>
+            <text class="dname" x="230" y="52" font-size="24" text-anchor="middle">Build</text>
+            <text class="dname" x="430" y="236" font-size="24" text-anchor="middle">Learn</text>
+            <text class="dname" x="230" y="418" font-size="24" text-anchor="middle">Measure</text>
+            <text class="dname" x="30" y="236" font-size="24" text-anchor="middle">Refine</text>
+            <text class="dctr" x="230" y="224" font-size="22" text-anchor="middle">Growth</text>
+            <text class="dctr" x="230" y="252" font-size="22" text-anchor="middle">Flywheel</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 — Our Goal -->
+    <section class="slide invert closer" data-screen-label="20">
+      <div class="turnlead rise">Our Goal</div>
+      <div class="bigline rise" style="transition-delay:.1s">Build a durable engagement platform that strengthens belief, sustains engagement, and compounds brand momentum over time.</div>
+    </section>
+
+    <!-- 21 — Workstream Methodology -->
+    <section class="slide" data-screen-label="21">
+      <div class="kick rise"><span class="num">21</span><span class="lbl">Approach · Workstream Methodology</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">One methodology, four phases.</h1>
+      <div class="phases">
+        <div class="phase rise" style="transition-delay:.16s"><div class="phn">Phase 01</div><div class="pht">Define the Foundation</div><div class="phb">Audience, opportunity and baselines — plus the brand’s strategic north star.</div><div class="phx">→</div></div>
+        <div class="phase rise" style="transition-delay:.24s"><div class="phn">Phase 02</div><div class="pht">Build the Strategy</div><div class="phb">Positioning and narrative meet the channel mix and investment plan.</div><div class="phx">→</div></div>
+        <div class="phase rise" style="transition-delay:.32s"><div class="phn">Phase 03</div><div class="pht">Activate &amp; Launch</div><div class="phb">Modular creative deployed against high-opportunity audiences.</div><div class="phx">→</div></div>
+        <div class="phase rise" style="transition-delay:.4s"><div class="phn">Phase 04</div><div class="pht">Learn &amp; Scale</div><div class="phb">Measure, attribute, refine — and turn wins into a repeatable roadmap.</div><div class="phx">↻</div></div>
+      </div>
+    </section>
+
+    <!-- 22 — Prospect Workstream Detail -->
+    <section class="slide" data-screen-label="22">
+      <div class="kick rise"><span class="num">22</span><span class="lbl">Approach · Prospect Media Workstream</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Media &amp; analytics, phase by phase.</h1>
+      <div class="wsphase">
+        <div class="wsp rise" style="transition-delay:.16s">
+          <div class="wph">Define the Foundation</div>
+          <div class="wpt">Audience &amp; Opportunity Analysis</div>
+          <div class="wpi">Custom analytics: opportunity, HOCs, competitive gaps, baselines.</div>
+          <ul><li>Opportunity Analysis — <strong>SOM / SOW</strong></li><li>Customer Segmentation — HOCs</li><li>SHOPOGRAPHY — share of visitation</li><li>MIXOGRAPHY — what drives ROAS</li><li>PLANOGRAPHY — planning with precision</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.24s">
+          <div class="wph">Build the Strategy</div>
+          <div class="wpt">Integrated Media &amp; Growth Strategy</div>
+          <div class="wpi">Channel mix and investment plan built for efficiency and scale.</div>
+          <ul><li>Content strategies</li><li>White space analysis</li><li>Precision targeting</li><li>Beyond the GRP</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.32s">
+          <div class="wph">Activate &amp; Launch</div>
+          <div class="wpt">Addressable Activation</div>
+          <div class="wpi">Deploy campaigns against defined high-opportunity audiences.</div>
+          <ul><li>Guaranteed outcomes</li><li>Success-metric alignment</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.4s">
+          <div class="wph">Learn &amp; Scale</div>
+          <div class="wpt">Measurement &amp; Attribution</div>
+          <div class="wpi">Attribution, benchmarking and testing frameworks.</div>
+          <ul><li>Performance monitoring — dashboard</li><li>Agile testing framework</li><li>Ongoing &amp; post-campaign learnings</li><li>Custom mapping portal</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23 — F+E Workstream Detail -->
+    <section class="slide" data-screen-label="23">
+      <div class="kick rise"><span class="num">23</span><span class="lbl">Approach · Friends &amp; Enemies Workstream</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Brand &amp; creative, phase by phase.</h1>
+      <div class="wsphase">
+        <div class="wsp rise" style="transition-delay:.16s">
+          <div class="wph">Define the Foundation</div>
+          <div class="wpt">Brand &amp; Strategic Alignment</div>
+          <div class="wpi">Clarify positioning, narrative territory and loyalty’s role in growth.</div>
+          <ul><li>Category &amp; white-space definition</li><li>HOC insight → brand strategy</li><li>Loyalty role in the growth model</li><li>Dealer ecosystem alignment</li><li>Strategic north star + decision filter</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.24s">
+          <div class="wph">Build the Strategy</div>
+          <div class="wpt">Brand Platform &amp; Narrative Framework</div>
+          <div class="wpi">Positioning, messaging and a modular platform.</div>
+          <ul><li>Core positioning articulation</li><li>Narrative territory system</li><li>Value proposition hierarchy</li><li>Messaging architecture (national → local)</li><li>Modular toolkit for dealers</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.32s">
+          <div class="wph">Activate &amp; Launch</div>
+          <div class="wpt">Campaign &amp; Creative System</div>
+          <div class="wpi">Modular assets and toolkits built for scale and dealer adaptation.</div>
+          <ul><li>Platform-led production</li><li>Modular asset system</li><li>National + regional deployment</li><li>Loyalty integration mechanics</li><li>Creative governance guidelines</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.4s">
+          <div class="wph">Learn &amp; Scale</div>
+          <div class="wpt">Optimization &amp; Iteration</div>
+          <div class="wpi">Refine creative, channels and offers on performance data.</div>
+          <ul><li>Creative performance readouts</li><li>Platform integrity checks</li><li>Offer &amp; message refinement cycles</li><li>Quarterly strategic recalibration</li><li>Scalable roadmap development</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 29 — Timelines / Roadmap -->
+    <section class="slide" data-screen-label="29">
+      <div class="kick rise"><span class="num">29</span><span class="lbl">Approach · Timelines</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">The roadmap, at a glance.</h1>
+      <div class="gantt">
+        <div class="ghead rise" style="transition-delay:.14s">
+          <div class="gh">Workstream</div><div class="gh">2026 Q3</div><div class="gh">2026 Q4</div><div class="gh">2027 Q1</div><div class="gh">2027 Q2</div><div class="gh">2027 Q3</div>
+        </div>
+        <div class="grow2 rise" style="transition-delay:.2s"><div class="glbl">Discovery</div><div class="gtrack"><div class="gbar" style="left:0%;width:13%"><span class="gbt">Discovery</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.26s"><div class="glbl">Strategy + Positioning</div><div class="gtrack"><div class="gbar" style="left:11%;width:16%"><span class="gbt">Positioning</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.32s"><div class="glbl">Brand Platform</div><div class="gtrack"><div class="gbar" style="left:25%;width:15%"><span class="gbt">Platform</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.38s"><div class="glbl">Campaign Production</div><div class="gtrack"><div class="gbar" style="left:38%;width:14%"><span class="gbt">Production</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.44s"><div class="glbl">Media — In-Market</div><div class="gtrack"><div class="gbar" style="left:33%;width:6%;background:transparent;border-style:dashed"><span class="gbt" style="color:var(--g600)">Transition</span></div><div class="gbar" style="left:40%;width:60%"><span class="gbt">Campaign in-market · Always-on</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.5s"><div class="glbl">Quarterly Review</div><div class="gtrack"><div class="gbar ghol" style="left:60%;width:40%;border-style:dashed"><span class="gbt">Review / iteration</span></div></div></div>
+        <div class="grow2 rise" style="transition-delay:.56s"><div class="glbl">Dealer Onboarding</div><div class="gtrack"><div class="gbar ghol" style="left:40%;width:18%;border-style:dashed"><span class="gbt">Onboarding</span></div></div></div>
+      </div>
+      <div class="fnote rise" style="transition-delay:.62s">This estimate provides a sense of scale based on the scope and timing outlined; it will be refined further upon award.</div>
+    </section>
+
+    <!-- 30 — Multi-Year Overview -->
+    <section class="slide" data-screen-label="30">
+      <div class="kick rise"><span class="num">30</span><span class="lbl">Agency Engagement · Multi-Year Overview</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">Friends forever.</h1>
+      <div class="sub rise" style="transition-delay:.12s">The first campaign is the starting line. Over three years we build repeatable rhythms that grow participation, deepen customer value, and compound results.</div>
+      <div class="cols">
+        <div class="col rise" style="transition-delay:.18s"><div class="cnum">Year One</div><div class="cname">Prove + Baseline</div><div class="cbody">Launch and validate the platform. Define KPIs and dashboards; set the reporting cadence and improve first-campaign ROI.</div></div>
+        <div class="col rise" style="transition-delay:.26s"><div class="cnum">Year Two</div><div class="cname">Strengthen + Standardize</div><div class="cbody">Turn the calendar into repeatable playbooks. Sharpen forecasting and compound learnings so each campaign starts stronger.</div></div>
+        <div class="col rise" style="transition-delay:.34s"><div class="cnum">Year Three</div><div class="cname">Grow + Diversify</div><div class="cbody">Expand segmented journeys, lift retention and frequency, and add new channels or partners only where proven.</div></div>
+        <div class="col rise" style="transition-delay:.42s"><div class="cnum">Beyond</div><div class="cname">Flywheel Management</div><div class="cbody">A mature operating rhythm supporting ongoing growth, major moments, and annual strategic review.</div></div>
+      </div>
+    </section>
+
+    <!-- 31 — First 90 Days -->
+    <section class="slide" data-screen-label="31">
+      <div class="kick rise"><span class="num">31</span><span class="lbl">Approach · Onboarding &amp; Maintenance</span><span class="rule"></span></div>
+      <h1 class="head xs rise" style="transition-delay:.06s">The first 90 days.</h1>
+      <div class="wsphase" style="grid-template-columns:repeat(3,1fr)">
+        <div class="wsp rise" style="transition-delay:.16s">
+          <div class="wph">Jul ’26 · Kick-off &amp; Alignment</div>
+          <div class="wpt">Get everyone pointed the same way.</div>
+          <ul><li>Kick-off meeting</li><li>Planning &amp; strategy roadmap</li><li>Roles &amp; responsibilities</li><li>Objectives &amp; success-metrics review</li><li>Resource &amp; access setup</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.26s">
+          <div class="wph">Jul–Aug ’26 · Strategic Immersions</div>
+          <div class="wpt">Go deep before going to market.</div>
+          <ul><li>Deep-dive workshops</li><li>IAT team introduction</li><li>Media &amp; campaign planning</li><li>Proactive communication plan</li><li>Approval milestones</li></ul>
+        </div>
+        <div class="wsp rise" style="transition-delay:.36s">
+          <div class="wph">Aug–Sep ’26 · In-Market</div>
+          <div class="wpt">First activity live.</div>
+          <ul><li>Initial activation in-market</li><li>Cadence and reporting begin</li><li>Early reads feed the roadmap</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing — bridge to Onboarding -->
+    <section class="slide invert closer" data-screen-label="27">
+      <div class="turnlead rise">Up next · Onboarding</div>
+      <div class="bigline rise" style="transition-delay:.1s">That’s the frame of reference. Now let’s get into <em>how we’ll actually work together</em>.</div>
+    </section>
+
+  </div><!-- /stage -->
+
+  <div class="footer" id="footer">
+    <div class="counter"><span class="cur" id="cur">01</span> / <span id="total">31</span></div>
+    <div class="nav">
+      <button id="prev" aria-label="Previous slide">←</button>
+      <button id="next" aria-label="Next slide">→</button>
+    </div>
+  </div>
+
+  </div><!-- /canvas -->
+  </div><!-- /viewport -->
+
+<script>
+(function(){
+  var canvas = document.getElementById('canvas');
+  function fit(){
+    if(canvas.hasAttribute('noscale')) return;
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    canvas.style.transform = 'translate(-50%,-50%) scale('+s+')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var prog = document.getElementById('prog');
+  var brand = document.getElementById('brand');
+  var footer = document.getElementById('footer');
+  var curEl = document.getElementById('cur');
+  document.getElementById('total').textContent = String(total).padStart(2,'0');
+
+  slides.forEach(function(s,i){
+    var n = s.querySelector('.kick .num');
+    if(n) n.textContent = String(i+1).padStart(2,'0');
+    s.setAttribute('data-screen-label', String(i+1).padStart(2,'0'));
+  });
+
+  function pad(n){return String(n+1).padStart(2,'0');}
+
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.remove('active','before','after');
+      if(i===cur) s.classList.add('active');
+      else if(i<cur) s.classList.add('before');
+      else s.classList.add('after');
+    });
+    var dark = slides[cur].classList.contains('invert');
+    brand.classList.toggle('on-dark',dark);
+    footer.classList.toggle('on-dark',dark);
+    prog.classList.toggle('on-dark',dark);
+    prog.style.width = ((cur)/(total-1)*100) + '%';
+    curEl.textContent = pad(cur);
+  }
+
+  function go(n){ cur = Math.max(0, Math.min(total-1, n)); render(); }
+  function next(){ if(cur<total-1) go(cur+1); }
+  function prev(){ if(cur>0) go(cur-1); }
+
+  document.getElementById('next').addEventListener('click', function(e){e.stopPropagation();next();});
+  document.getElementById('prev').addEventListener('click', function(e){e.stopPropagation();prev();});
+  document.addEventListener('click', function(e){ if(e.target.closest('.nav')) return; next(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key===' '||e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(total-1);}
+  });
+
+  window.__deckGo = go;
+  render();
+})();
+</script>
+</body>
+</html>
