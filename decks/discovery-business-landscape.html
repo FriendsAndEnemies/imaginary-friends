@@ -197,9 +197,23 @@
       <div class="hint rise" style="transition-delay:.28s">A guided conversation — mostly listening →</div>
     </section>
 
-    <!-- 2 -->
+    <!-- 2 — lead-in: the story -->
     <section class="slide" data-screen-label="02">
-      <div class="kick rise"><span class="num">02</span><span class="lbl">Business target</span><span class="rule"></span></div>
+      <div class="kick rise"><span class="num">02</span><span class="lbl">The story</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">Tell us the Centex story — from founding to where you are today.</h1>
+      <div class="sub rise" style="transition-delay:.14s">We’re closing the gap between the past, the present and the future — so we start by understanding how you got here.</div>
+    </section>
+
+    <!-- 3 — lead-in: current state -->
+    <section class="slide" data-screen-label="03">
+      <div class="kick rise"><span class="num">03</span><span class="lbl">Current state</span><span class="rule"></span></div>
+      <h1 class="head q rise" style="transition-delay:.06s">How is the business running today?</h1>
+      <div class="sub rise" style="transition-delay:.14s">The present moment — how Centex operates, earns and competes right now, before we look ahead.</div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" data-screen-label="04">
+      <div class="kick rise"><span class="num">04</span><span class="lbl">Business target</span><span class="rule"></span></div>
       <h1 class="head q rise" style="transition-delay:.06s">Where do you want Centex to be — in 1 year? In 3 years?</h1>
     </section>
 
@@ -382,6 +396,12 @@
   var footer = document.getElementById('footer');
   var curEl = document.getElementById('cur');
   document.getElementById('total').textContent = String(total).padStart(2,'0');
+
+  slides.forEach(function(s,i){
+    var n = s.querySelector('.kick .num');
+    if(n) n.textContent = String(i+1).padStart(2,'0');
+    s.setAttribute('data-screen-label', String(i+1).padStart(2,'0'));
+  });
 
   function pad(n){return String(n+1).padStart(2,'0');}
 
